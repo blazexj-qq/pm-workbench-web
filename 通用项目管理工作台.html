@@ -164,6 +164,7 @@ label.fld{display:block;font-size:.85rem;color:var(--sub);margin:6px 0 2px}
 .todo-delay-input{font-size:.8rem;padding:3px 8px;border:1px solid var(--line);border-radius:6px;width:160px;color:var(--sub)}
 .todo-del{color:#ccc;cursor:pointer;font-size:.85rem;padding:2px 6px;border-radius:4px;transition:all .15s}
 .todo-del:hover{color:var(--bad);background:#fef2f2}
+.todo-status-sel{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2364748b'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center;background-size:10px;padding-right:22px}
 .notes-archive-toggle{font-size:.82rem;color:var(--accent);cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin:8px 0}
 .notes-archive-toggle:hover{text-decoration:underline}
 .notes-empty{text-align:center;padding:40px 20px;color:var(--sub)}
@@ -217,6 +218,13 @@ th{color:var(--sub);font-weight:600;background:var(--soft)}
 .muted{color:var(--sub);font-size:.9rem}
 .note{background:#fff8c5;border:1px solid #f0d00055;border-radius:9px;padding:12px 14px;font-size:.9rem;color:#6b5300;margin-bottom:14px;overflow-wrap:break-word;word-break:break-word}
 .warnbox{background:#ffebe9;border:1px solid #ffc1ba;border-radius:9px;padding:12px 14px;font-size:.9rem;color:#7a1c14;margin-bottom:14px;overflow-wrap:break-word;word-break:break-word}
+/* AI 处理中动画 */
+.ai-spinner{display:inline-block;width:40px;height:40px;border:4px solid #e8e8e8;border-top-color:var(--accent);border-radius:50%;animation:ai-spin .7s linear infinite;margin-bottom:4px}
+@keyframes ai-spin{to{transform:rotate(360deg)}}
+.ai-progress-text{animation:ai-pulse 2s ease-in-out infinite}
+@keyframes ai-pulse{0%,100%{opacity:1}50%{opacity:.5}}
+#aiStopBtn{transition:all .2s;cursor:pointer}
+#aiStopBtn:hover{transform:scale(1.05)}
 /* 顶部小工具按钮 */
 .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 /* 分段切换按钮（进度维度：汇总/甘特图） */
@@ -945,12 +953,12 @@ async function polishBrief(){
   lines+=`1. 滞后/风险任务 ${b.lagged.length} 条：`+(b.lagged.length?b.lagged.slice(0,6).map(t=>`${projName(t.projectId)}-${t.title}(责任人:${t.owner||'未定责'})`).join('；'):'无')+'\n';
   lines+=`2. 临期任务 ${b.dueSoon.length} 条：`+(b.dueSoon.length?b.dueSoon.slice(0,6).map(t=>`${projName(t.projectId)}-${t.title}(截止${t.due})`).join('；'):'无')+'\n';
   lines+=`3. 待复核 ${b.pendingReview.length} 条；昨日笔记 ${b.yNotes.length} 篇。`;
-  try{
-    const out=await aiChat([{role:'user',content:lines}], {temp:0.6});
+  await aiRun(async(signal)=>{
+    const out=await aiChat([{role:'user',content:lines}], {temp:0.6, signal});
     showGen('🤖 今日简报（AI 润色）', `<div style="white-space:pre-wrap;line-height:1.7;font-size:.95rem">${esc(out)}</div>`,
       [{t:'📝 存为今日笔记',cls:'btn',fn:()=>{ const n=getOrCreateNote(today()); n.content=(n.content?n.content+'\n\n':'')+'【AI今日简报】\n'+out; n.updatedAt=nowStr(); save(); closeModal('genModal'); navigateTo('notes'); render(); }},
        {t:'关闭',cls:'btn ghost',fn:()=>closeModal('genModal')}]);
-  }catch(e){ alert('AI 润色失败：'+e.message); }
+  },'润色中…');
 }
 
 function renderDashboard(){
@@ -1577,20 +1585,26 @@ async function markReviewed(id){
 }
 
 /* ---------- [6] AI 双模式（与错题管家同一契约：POST /chat，body={model,messages}） ---------- */
+// 全局 AI 中断控制器
+let _aiAbortCtrl = null;
+
 async function aiChat(messages, opts){
   opts=opts||{};
   const cfg=data.settings.ai||{};
   let model=cfg.model||'qwen-plus';
-  if(cfg.workerUrl){ // 模式B：阿里云代理（Key在服务端，前端不带Key）
+  const signal = opts.signal || null; // 支持外部传入 AbortSignal
+  // 模式B：云端代理（Key在服务端）
+  if(cfg.workerUrl){
     const url=cfg.workerUrl.replace(/\/$/,'')+'/chat';
-    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model,messages,temperature:opts.temp})});
+    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model,messages,temperature:opts.temp}), signal});
     if(!res.ok) throw new Error('代理返回 '+res.status);
     const j=await res.json();
     return j.choices&&j.choices[0].message.content;
   }
+  // 模式A：直连Key
   if(!cfg.apiKey) throw new Error('未配置AI：请在「设置」填「云端代理地址」或「API Key」');
   const b=(cfg.base||'https://dashscope.aliyuncs.com/compatible-mode/v1').replace(/\/$/,'');
-  const res=await fetch(b+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+cfg.apiKey},body:JSON.stringify({model,messages,temperature:opts.temp})});
+  const res=await fetch(b+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+cfg.apiKey},body:JSON.stringify({model,messages,temperature:opts.temp}), signal});
   if(!res.ok) throw new Error('AI返回 '+res.status);
   const j=await res.json();
   return j.choices&&j.choices[0].message.content;
@@ -1656,9 +1670,9 @@ function ctxSummary(){
 }
 async function aiAssign(){
   const text=document.getElementById('aiText').value.trim(); if(!text){alert('请先粘贴文字');return;}
-  await aiRun(async()=>{
+  await aiRun(async(signal)=>{
     const sys='你是工程项目管理助手。把用户给的文字拆成任务清单，仅输出JSON数组，每条:{projectHint(项目名称关键词),dimension(从[进度,质量,安全·环保,产值·成本,物资设备,风险,劳务·人力,合同·分包,图纸·资料,变更·签证,巡检·巡查]选一),title,owner,due(YYYY-MM-DD或空),priority(高/中/低),notes}。不要解释。';
-    const c=await aiChat([{role:'system',content:sys},{role:'user',content:text}],{temp:0.2});
+    const c=await aiChat([{role:'system',content:sys},{role:'user',content:text}],{temp:0.2, signal});
     let arr=[]; try{ arr=JSON.parse((c.match(/\[[\s\S]*\]/)||[c])[0]); }catch(e){ throw new Error('AI返回无法解析为JSON'); }
     // 预览 + 人工确认导入
     showGen('AI 拆解结果（请核对后导入）', previewTasks(arr), [{t:'✅ 确认导入',cls:'btn',fn:()=>{importTasks(arr);closeModal('genModal');}},{t:'取消',cls:'btn ghost',fn:()=>closeModal('genModal')}]);
@@ -1744,16 +1758,16 @@ async function aiProcess(){
     }
   }
   if(!text){alert('请粘贴文字或上传文件');return;}
-  await aiRun(async()=>{
-    const c=await aiChat([{role:'system',content:'你是工程数据整理助手，按用户要求整理统计给定文本，输出条理清晰的markdown要点。若文本来自表格/文档，先梳理结构再统计。'},{role:'user',content:'要求：整理并统计以下内容，列出关键项、问题与数据。\n\n'+text}],{temp:0.3});
+  await aiRun(async(signal)=>{
+    const c=await aiChat([{role:'system',content:'你是工程数据整理助手，按用户要求整理统计给定文本，输出条理清晰的markdown要点。若文本来自表格/文档，先梳理结构再统计。'},{role:'user',content:'要求：整理并统计以下内容，列出关键项、问题与数据。\n\n'+text}],{temp:0.3, signal});
     showGen('文档整理结果', `<div class="md">${miniMd(c)}</div>`, [{t:'复制',cls:'btn',fn:()=>copyText(c)},{t:'关闭',cls:'btn ghost',fn:()=>closeModal('genModal')}]);
   },'整理中…');
 }
 async function aiReport(type){
-  await aiRun(async()=>{
+  await aiRun(async(signal)=>{
     const ctx=ctxSummary();
     const sys='你是工程项目管理汇报助手，基于给定台账数据生成'+type+'。用markdown，含总体进展、各维度要点、需跟进事项。数据不足时据实说明。';
-    const c=await aiChat([{role:'system',content:sys},{role:'user',content:'当前数据：\n'+ctx+'\n\n请生成'+type+'。'}],{temp:0.4});
+    const c=await aiChat([{role:'system',content:sys},{role:'user',content:'当前数据：\n'+ctx+'\n\n请生成'+type+'。'}],{temp:0.4, signal});
     const el=document.getElementById('aiOut'); if(el) el.innerHTML=`<div class="md">${miniMd(c)}</div>`;
     // 同时存一份到报告列表
     data.reports.unshift({type,content:c,at:new Date().toLocaleString()}); save();
@@ -1761,8 +1775,65 @@ async function aiReport(type){
   },'生成中…');
 }
 async function aiRun(fn,loading){
-  showGen('AI 处理中', '<div class="muted">'+loading+'（如长时间无响应，检查代理地址/Key 或阿里云函数是否部署）</div>', []);
-  try{ await fn(); }catch(e){ document.getElementById('genModalBody').innerHTML='<div class="warnbox">❌ '+esc(e.message)+'</div>'; }
+  // 创建中断控制器
+  _aiAbortCtrl = new AbortController();
+  const startTime = Date.now();
+
+  // 动态进度弹窗（带动画 + 停止按钮）
+  const progressHtml = `
+    <div style="text-align:center;padding:10px 0">
+      <div class="ai-spinner"></div>
+      <div class="ai-progress-text" style="margin-top:12px;font-size:.92rem;color:var(--text);font-weight:500">${esc(loading)}</div>
+      <div class="ai-progress-dots" style="margin-top:8px;font-size:1.3rem;letter-spacing:4px;color:var(--accent)"></div>
+      <div class="ai-progress-timer muted" style="margin-top:6px;font-size:.82rem">已用时 0 秒</div>
+      <button id="aiStopBtn" class="btn" style="margin-top:14px;background:#fff0f0;color:var(--bad);border:1px solid #ffccc7;font-weight:600"
+        onmouseover="this.style.background='#ffe0e0'" onmouseout="this.style.background='#fff0f0'">⏹ 停止 AI 处理</button>
+    </div>`;
+  showGen('🤖 AI 处理中', progressHtml, []);
+
+  // 启动计时器动画
+  let dotsIdx = 0;
+  const dotsChars = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
+  const dotsEl = document.querySelector('.ai-progress-dots');
+  const timerEl = document.querySelector('.ai-progress-timer');
+  const timerInterval = setInterval(() => {
+    if(timerEl) {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      timerEl.textContent = '已用时 ' + elapsed + ' 秒';
+    }
+    if(dotsEl) {
+      dotsIdx = (dotsIdx + 1) % dotsChars.length;
+      dotsEl.textContent = dotsChars[dotsIdx];
+    }
+  }, 100);
+
+  // 停止按钮事件
+  const stopBtn = document.getElementById('aiStopBtn');
+  if(stopBtn) {
+    stopBtn.onclick = () => {
+      if(_aiAbortCtrl) _aiAbortCtrl.abort();
+      clearInterval(timerInterval);
+      document.getElementById('genModalBody').innerHTML = '<div style="text-align:center;padding:30px 16px"><div style="font-size:2rem;margin-bottom:10px">🛑</div><div style="font-weight:600;font-size:1rem">已停止 AI 处理</div><div class="muted" style="margin-top:8px">你可以关闭此窗口后重试或调整内容</div></div>';
+      // 隐藏操作按钮区
+      document.getElementById('genModalActs').innerHTML = '';
+    };
+  }
+
+  try {
+    // 把 signal 注入到 opts 中，让 aiChat 的 fetch 能响应中断
+    await fn(_aiAbortCtrl.signal);
+    clearInterval(timerInterval);
+  } catch(e) {
+    clearInterval(timerInterval);
+    if(e.name === 'AbortError') {
+      document.getElementById('genModalBody').innerHTML = '<div style="text-align:center;padding:30px 16px"><div style="font-size:2rem;margin-bottom:10px">🛑</div><div style="font-weight:600;font-size:1rem">已停止 AI 处理</div><div class="muted" style="margin-top:8px">你可以关闭此窗口后重试或调整内容</div></div>';
+      document.getElementById('genModalActs').innerHTML = '';
+    } else {
+      document.getElementById('genModalBody').innerHTML='<div class="warnbox">❌ '+esc(e.message)+'</div>';
+    }
+  } finally {
+    _aiAbortCtrl = null;
+  }
 }
 
 /* ---------- [8] 云端备份 ---------- */
@@ -2012,12 +2083,16 @@ function exportMaterialTemplateHtml(ts){
 async function githubBackup(){
   const b=data.settings.backup||{};
   if(!b.token||!b.owner||!b.repo) throw new Error('未配置GitHub备份（设置里填 token/owner/repo）');
-  const content=btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+  /* 安全：克隆数据并剔除敏感字段（API Key / GitHub Token） */
+  const safeData=JSON.parse(JSON.stringify(data));
+  if(safeData.settings&&safeData.settings.ai) safeData.settings.ai.apiKey='';
+  if(safeData.settings&&safeData.settings.backup) safeData.settings.backup.token='';
+  const content=btoa(unescape(encodeURIComponent(JSON.stringify(safeData))));
   const path=b.path||'pm-workbench-backup.json';
   const api=`https://api.github.com/repos/${b.owner}/${b.repo}/contents/${path}`;
   const hd={'Authorization':'token '+b.token,'Accept':'application/vnd.github.v3+json'};
   let sha; try{ const r=await fetch(api,{headers:hd}); if(r.ok){sha=(await r.json()).sha;} }catch(e){}
-  const body={message:'pm-workbench backup '+new Date().toISOString(),content}; if(sha)body.sha=sha;
+  const body={message:'pm-workbench backup '+new Date().toISOString()+' (keys stripped)',content}; if(sha)body.sha=sha;
   const r=await fetch(api,{method:'PUT',headers:Object.assign({'Content-Type':'application/json'},hd),body:JSON.stringify(body)});
   if(!r.ok) throw new Error('GitHub备份失败 '+r.status);
   return true;
@@ -2388,9 +2463,9 @@ function mmParseOffline(){
 async function mmParseAI(){
   const raw=document.getElementById('mmText').value.trim();
   if(!raw){alert('请先粘贴或上传纪要正文');return;}
-  await aiRun(async()=>{
+  await aiRun(async(signal)=>{
     const sys='你是工程项目管理助手。把会议纪要做成任务清单，仅输出JSON数组，每条:{title,dimension(从[进度,质量,安全·环保,产值·成本,物资设备,风险,劳务·人力,合同·分包,图纸·资料,变更·签证,巡检·巡查]选一),owner,due(YYYY-MM-DD或空),priority(高/中/低),projectHint(项目名称关键词)}。不要解释。';
-    const c=await aiChat([{role:'system',content:sys},{role:'user',content:raw}],{temp:0.2});
+    const c=await aiChat([{role:'system',content:sys},{role:'user',content:raw}],{temp:0.2, signal});
     let arr=[]; try{ arr=JSON.parse((c.match(/\[[\s\S]*\]/)||[c])[0]); }catch(e){ throw new Error('AI返回无法解析为JSON'); }
     const drafts=arr.map(t=>({title:t.title||'',dimKey:(DIMENSIONS.find(d=>d.label===t.dimension)||{key:t.dimension||'progress'}).key,owner:t.owner||'',due:t.due||'',priority:t.priority||'中',projectId:_matchProject(t.projectHint||'')}));
     mmShowDraftPreview(drafts,'ai');
@@ -2497,9 +2572,9 @@ function mmSaveNoteSpeech(){ const n=getOrCreateNote(today()); n.content=(n.cont
 async function mmGenSpeechAI(){
   const A=mmSpeechContext();
   const tpl=mmBuildSpeechTemplate(A);
-  await aiRun(async()=>{
+  await aiRun(async(signal)=>{
     const sys='你是工程项目管理例会主持人。下面是一份结构化的周报要点，请改写成口语化、自然流畅的会议主持发言稿，保留所有关键数据与责任人，分"开场-进展-问题-下周-协调-结语"六段，不要编造数据。';
-    const c=await aiChat([{role:'system',content:sys},{role:'user',content:tpl}],{temp:0.6});
+    const c=await aiChat([{role:'system',content:sys},{role:'user',content:tpl}],{temp:0.6, signal});
     _mtSpeech=c;
     document.getElementById('mmSpeechOut').innerHTML='<div class="md" style="white-space:pre-wrap;background:#fffaf0;padding:12px;border-radius:8px;max-height:60vh;overflow:auto">'+esc(c)+'</div>'+
       '<div style="margin-top:10px"><button class="btn" onclick="mmCopySpeech()">📋 复制</button> <button class="btn ghost" onclick="mmExportSpeech()">📄 导出Word</button> <button class="btn ghost" onclick="mmSaveNoteSpeech()">📝 存为工作笔记</button></div>';
@@ -2681,6 +2756,7 @@ function navigateTo(v){ currentView=v; closeSide(); render(); }
 /* ---------- 工作笔记 ---------- */
 let _notesDate=today(); // 当前笔记日期
 let _showArchived=false; // 是否显示已完成归档
+let _deletedTodos=[]; // 误删回收站（内存级，刷新清空）
 
 function getOrCreateNote(dateStr){
   let note=data.notes.find(n=>n.date===dateStr);
@@ -2706,11 +2782,14 @@ function renderNotes(){
     const isDelayed=t.status==='delayed';
     return `
     <div class="todo-card ${isDone?'done-card':''}" id="todo-${t.id}">
-      <div class="todo-check ${isDone?'checked':''}" onclick="toggleTodoStatus('${note.id}','${t.id}')">${isDone?'✓':''}</div>
+      <select class="todo-status-sel" onchange="changeTodoStatus('${note.id}','${t.id}',this.value)" style="padding:3px 6px;border-radius:6px;border:2px solid ${isDone?'var(--ok)':isDelayed?'var(--bad)':'var(--warn)'};font-size:.82rem;font-weight:600;cursor:pointer;background:#fff;flex-shrink:0;margin-top:1px">
+        <option value="pending" ${t.status==='pending'?'selected':''}>⏳ 未完成</option>
+        <option value="done" ${t.status==='done'?'selected':''}>✅ 已完成</option>
+        <option value="delayed" ${t.status==='delayed'?'selected':''}>⚠️ 延期办理</option>
+      </select>
       <div class="todo-body">
         <div class="todo-text">${esc(t.text)}</div>
         <div class="todo-meta">
-          <span class="todo-status-tag ${t.status}">${t.status==='pending'?'⏳ 未完成':t.status==='done'?'✅ 已完成':'⚠️ 延期'}</span>
           ${isDelayed?`<input class="todo-delay-input" placeholder="延期原因..." value="${esc(t.delayReason||'')}" onchange="updateTodoDelay('${note.id}','${t.id}',this.value)">`:''}
           ${isDone?`<span class="muted" style="font-size:.78rem">${t.doneAt||''}</span>`:''}
           <span class="todo-del" onclick="deleteTodo('${note.id}','${t.id}')">✕ 删除</span>
@@ -2721,7 +2800,7 @@ function renderNotes(){
 
   return `
   <div style="background:#e8f0fe;border-left:4px solid #4285f4;padding:10px 16px;border-radius:0 10px 10px 0;margin-bottom:18px;font-size:.92rem">
-    📝 工作笔记：记录每天的工作内容，AI 自动帮你提炼<span style="color:var(--accent);font-weight:600">总结</span>和<span style="color:var(--warn);font-weight:600">待办事项</span>。完成的待办勾选后自动归档隐藏。
+    📝 工作笔记：记录每天的工作内容，AI 自动帮你提炼<span style="color:var(--accent);font-weight:600">总结</span>和<span style="color:var(--warn);font-weight:600">待办事项</span>。待办可切换状态（未完成/已完成/延期），误删30秒内可恢复。
   </div>
 
   <!-- 日期选择 + 新建 -->
@@ -2770,7 +2849,16 @@ function renderNotes(){
       <input type="text" id="newTodoInput" placeholder="+ 添加新的待办事项..." style="flex:1;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:.9rem"
         onkeydown="if(event.key==='Enter')addTodoManual('${dateStr}')">
       <button class="btn sm" onclick="addTodoManual('${dateStr}')">添加</button>
-    </div>`:'<div class="muted" style="padding:16px;text-align:center">暂无待办事项。在上方写笔记后点「AI 生成」自动提取，或手动添加。</div>'}
+    </div>
+
+    <!-- 误删恢复（30秒内） -->
+    ${(_deletedTodos&&_deletedTodos.length>0)?`
+    <div style="margin-top:10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span style="color:#991b1b;font-size:.85rem;font-weight:600">🗑 已删除 ${_deletedTodos.length} 条（30秒内可恢复）</span>
+      ${_deletedTodos.map((d,i)=>`<span class="muted" style="font-size:.82rem">· ${esc(d.todo.text)}</span>`).join('')}
+      <button class="btn sm" onclick="${_deletedTodos.map((d,i)=>`restoreTodo(${i})`).join(';')}" style="background:#dc2626;color:#fff">🔄 全部恢复</button>
+      <button class="btn ghost sm" onclick="_deletedTodos=[];render()" style="font-size:.78rem">忽略</button>
+    </div>`:''}`:'<div class="muted" style="padding:16px;text-align:center">暂无待办事项。在上方写笔记后点「AI 生成」自动提取，或手动添加。</div>'}
 
     <!-- 已完成归档 -->
     ${doneTodos.length>0?`
@@ -2863,6 +2951,15 @@ function toggleTodoStatus(noteId,todoId){
   else{t.status='done';t.doneAt=nowStr();}
   note.updatedAt=nowStr(); save(); render();
 }
+function changeTodoStatus(noteId,todoId,newStatus){
+  const note=data.notes.find(n=>n.id===noteId); if(!note)return;
+  const t=note.todos.find(x=>x.id===todoId); if(!t)return;
+  const old=t.status;
+  t.status=newStatus;
+  if(newStatus==='done') t.doneAt=nowStr(); else t.doneAt='';
+  if(newStatus!=='delayed') t.delayReason='';
+  note.updatedAt=nowStr(); save(); render();
+}
 
 function updateTodoDelay(noteId,todoId,reason){
   const note=data.notes.find(n=>n.id===noteId); if(!note)return;
@@ -2872,10 +2969,23 @@ function updateTodoDelay(noteId,todoId,reason){
 }
 
 function deleteTodo(noteId,todoId){
-  if(!confirm('删除这条待办？'))return;
   const note=data.notes.find(n=>n.id===noteId); if(!note)return;
+  const t=note.todos.find(x=>x.id===todoId); if(!t)return;
+  /* 移到回收站（30秒后自动清除） */
+  if(!_deletedTodos) _deletedTodos=[];
+  _deletedTodos.push({todo:t,noteId:noteId,deletedAt:Date.now()});
   note.todos=note.todos.filter(x=>x.id!==todoId);
   note.updatedAt=nowStr(); save(); render();
+  /* 显示恢复提示 */
+  showToast('已删除，30秒内可点「🔄 恢复」撤回');
+}
+function restoreTodo(idx){
+  if(!_deletedTodos||!_deletedTodos[idx]) return;
+  const item=_deletedTodos[idx];
+  const note=data.notes.find(n=>n.id===item.noteId);
+  if(note){ note.todos.unshift(item.todo); note.updatedAt=nowStr(); save(); }
+  _deletedTodos.splice(idx,1);
+  render();
 }
 
 function addTodoManual(dateStr){
