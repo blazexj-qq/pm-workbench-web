@@ -56,7 +56,7 @@
 <title>通用项目管理工作台</title>
 <style>
 :root{ --scale:1; --bg:#0d1117; --side:#161b22; --card:#ffffff; --ink:#1f2328; --sub:#57606a; --line:#d0d7de; --accent:#2f81f7; --ok:#2da44e; --warn:#d29922; --bad:#cf222e; --soft:#f6f8fa; }
-html{ font-size:calc(17px*var(--scale)); width:100%;overflow-x:hidden; }
+html{ font-size:calc(17px*var(--scale)); width:100%;overflow-x:auto; }
 *{box-sizing:border-box}
 body{margin:0;width:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",system-ui;background:var(--soft);color:var(--ink);font-size:1rem;line-height:1.55}
 /* ===== 布局：GitHub 风格深色侧栏 + 内容区 ===== */
@@ -87,7 +87,7 @@ body{margin:0;width:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI"
 input,select,textarea{font-family:inherit;font-size:.96rem;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);width:100%}
 label.fld{display:block;font-size:.85rem;color:var(--sub);margin:6px 0 2px}
 /* ===== 驾驶舱：工程管理风格 ===== */
-.db-top{display:flex;gap:10px;align-items:stretch;margin-bottom:14px}
+.db-top{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;margin-bottom:14px}
 .db-stat{flex:1;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:box-shadow .15s;border-left:4px solid transparent}
 .db-stat:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
 .db-stat .sn{font-size:1.7rem;font-weight:800;line-height:1;white-space:nowrap}
@@ -240,6 +240,14 @@ th{color:var(--sub);font-weight:600;background:var(--soft)}
   .mask{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:35;display:none}
   .mask.show{display:block}
   .main{padding:14px;left:0;right:0;margin-left:0}
+  /* 窄屏 KPI 卡片缩小换行 */
+  .db-stat{padding:10px 12px;border-radius:10px;flex:1 1 22%;min-width:80px}
+  .db-stat .sn{font-size:1.4rem!important}
+  .db-stat .sd{font-size:.7rem}
+  /* 窄屏表格字号 */
+  th,td{padding:7px 6px;font-size:.85rem;min-width:40px}
+  /* 窄屏面板内边距收缩 */
+  .panel{padding:12px;margin-bottom:12px;border-radius:10px}
 }
 @media(pointer:coarse){ html{font-size:calc(18px*var(--scale))} }
 /* 字体三档（复用错题管家 rem 思路） */
@@ -247,6 +255,11 @@ th{color:var(--sub);font-weight:600;background:var(--soft)}
 .fscale button{padding:5px 12px;font-size:.86rem;border:1px solid var(--line);background:#fff;border-radius:6px;cursor:pointer}
 .fscale button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 svg .b{fill:var(--accent)} svg .bg{fill:#eaeef2} svg .r{fill:var(--bad)} svg .y{fill:var(--warn)} svg .g{fill:var(--ok)} svg .t{fill:#333;font-size:14px;font-weight:500}
+/* ── 表格基础样式（防窄屏竖排） ── */
+table{width:100%;border-collapse:collapse;min-width:100%}
+th,td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:50px;font-size:.9rem}
+th{background:var(--soft);font-weight:600;color:var(--ink);position:sticky;top:0;z-index:1}
+.panel>table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
 /* 自定义项目下拉（可搜索+可删除） */
 .proj-select{position:relative}
 .proj-drop{display:none;position:absolute;top:100%;left:0;right:0;z-index:99;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);max-height:200px;overflow-y:auto;margin-top:4px}
