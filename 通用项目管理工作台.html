@@ -2044,11 +2044,34 @@ function renderSettings(){
     <label class="fld">云端代理地址（阿里云FC公网地址，填了就用代理）</label>
     <input id="s-worker" value="${esc(s.ai.workerUrl)}" placeholder="https://xxx.fcapp.run">
     <label class="fld">直连 API Key（仅直连模式需要，存本机IndexedDB，不上传）</label>
-    <input id="s-key" value="${esc(s.ai.apiKey)}" placeholder="sk-... 或留空">
+    <div style="display:flex;gap:6px;align-items:center">
+      <input id="s-key" type="password" value="${esc(s.ai.apiKey)}" placeholder="sk-... 或留空" style="flex:1" oninput="document.getElementById('s-key-toggle').dataset.val=this.value">
+      <button id="s-key-toggle" type="button" onclick="const t=document.getElementById('s-key');const b=this;if(t.type==='password'){t.type='text';b.textContent='🙈';}else{t.type='password';b.textContent='👁';}" title="显示/隐藏 Key" style="padding:4px 8px;cursor:pointer;border:1px solid #ccc;background:#f8f8f8;border-radius:4px;font-size:.95rem;flex-shrink:0">👁</button>
+    </div>
     <label class="fld">API Base（直连用）</label>
-    <input id="s-base" value="${esc(s.ai.base)}">
+    <input id="s-base" value="${esc(s.ai.base)}" list="base-dl" placeholder="选择或输入自定义地址">
+    <datalist id="base-dl">
+      <option value="https://dashscope.aliyuncs.com/compatible-mode/v1">
+      <option value="https://api.deepseek.com/v1">
+      <option value="https://open.bigmodel.cn/api/paas/v4">
+      <option value="https://api.moonshot.cn/v1">
+      <option value="https://openrouter.ai/api/v1">
+      <option value="https://api.siliconflow.cn/v1">
+    </datalist>
     <label class="fld">模型名</label>
-    <input id="s-model" value="${esc(s.ai.model)}" placeholder="qwen-plus / qwen3-vl-plus / deepseek-chat">
+    <input id="s-model" value="${esc(s.ai.model)}" list="model-dl" placeholder="选择或输入自定义模型名">
+    <datalist id="model-dl">
+      <option value="qwen-plus">
+      <option value="qwen-max">
+      <option value="qwen3-vl-plus">
+      <option value="qwen-turbo">
+      <option value="deepseek-chat">
+      <option value="deepseek-reasoner">
+      <option value="glm-4-plus">
+      <option value="glm-4-flash">
+      <option value="moonshot-v1-8k">
+      <option value="moonshot-v1-32k">
+    </datalist>
     <div class="muted" style="margin-top:8px">代理地址与 Key 二选一。代理模式最安全：Key 只在阿里云，网页只发文字。代理的 ALLOWED_ORIGIN 若设了域名，本工作台需部署在同一 GitHub Pages 域名下，或本地用时把该项留空。</div>
   </div>
   <div class="panel"><h3>☁️ GitHub 云端备份</h3>
