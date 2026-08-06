@@ -7,12 +7,12 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <!-- 版本号：每次修改必须更新此行，JS 会用它检测缓存 -->
-<meta name="app-version" content="v2026-08-05-13-30">
+<meta name="app-version" content="v2026-08-06-11-15">
 <script>
 // ── 缓存破坏层 1：bfcache（往返缓存）检测 ──
 // Edge 关闭浏览器后重开会从内存恢复旧页面，不重新加载文件
 (function(){
-  var EXPECTED='v2026-08-05-13-30';
+  var EXPECTED='v2026-08-06-11-15';
   var meta=document.querySelector('meta[name=app-version]');
   var ACTUAL=meta?meta.getAttribute('content'):'';
   // 检测 bfcache 恢复
@@ -243,6 +243,13 @@ th{color:var(--sub);font-weight:600;background:var(--soft)}
 .gantt-svg .gt-today{font-size:11px;fill:#e53935;font-weight:600}
 .gantt-legend{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:8px;font-size:.82rem;color:var(--sub)}
 .gantt-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+/* 甘特图交互：整行可点跳转编辑 + 悬停反馈 */
+.gantt-svg g.tk{cursor:pointer}
+.gantt-svg g.tk:hover .gt-l{text-decoration:underline}
+.gantt-svg g.tk:hover rect{stroke-width:2}
+/* 甘特图横向滚动容器：窄屏避免标签被无限缩小 */
+.gantt-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+.gantt-scroll .gantt-svg{display:block}
 /* 移动端抽屉 */
 .menu-btn{display:none}
 @media(max-width:820px){
@@ -260,6 +267,8 @@ th{color:var(--sub);font-weight:600;background:var(--soft)}
   th,td{padding:7px 6px;font-size:.85rem;min-width:40px}
   /* 窄屏面板内边距收缩 */
   .panel{padding:12px;margin-bottom:12px;border-radius:10px}
+  /* 甘特图：窄屏保持最小宽度，横向滚动而非无限缩小 */
+  .gantt-scroll .gantt-svg{min-width:540px}
 }
 @media(pointer:coarse){ html{font-size:calc(18px*var(--scale))} }
 /* 字体三档（复用错题管家 rem 思路） */
@@ -506,12 +515,32 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   box-shadow:0 2px 8px rgba(212,175,55,.1);
   border-width:1.2px;
 }
+/* ===== 任务看板 ===== */
+.kb-wrap{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px}
+.kb-col{flex:0 0 252px;width:252px;background:#f4f6f8;border:1px solid var(--line);border-radius:10px;padding:8px;display:flex;flex-direction:column}
+.kb-col.kb-over{background:#e8f0fe;border-color:var(--accent)}
+.kb-col-h{display:flex;justify-content:space-between;align-items:center;font-weight:700;padding:4px 6px 8px}
+.kb-cnt{background:#fff;border:1px solid var(--line);border-radius:999px;padding:0 8px;font-size:.78rem}
+.kb-cards{display:flex;flex-direction:column;gap:8px;min-height:54px}
+.kb-card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;transition:box-shadow .15s}
+.kb-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.kb-card-t{font-weight:600;font-size:.9rem;margin-bottom:4px;line-height:1.35}
+.kb-card-m{font-size:.78rem;color:var(--sub);margin-bottom:4px}
+.kb-card-f{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:.76rem}
+.kb-sel{margin-top:6px;width:100%;padding:3px;font-size:.76rem;border:1px solid var(--line);border-radius:5px}
+.kb-empty{color:#aab;font-size:.78rem;text-align:center;padding:14px 0}
+/* ===== 数据趋势 ===== */
+.trend-h{font-weight:700;font-size:.92rem;margin-bottom:8px}
+.trend-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:.8rem;color:var(--sub)}
+.trend-legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+/* ===== 导入弹窗 ===== */
+.imp-tip{font-size:.84rem;color:var(--sub);line-height:1.5}
 </style>
 </head>
 <body>
 <!-- 版本横幅（每次改版必更新版本号 + meta[name=app-version]） -->
 <div id="verBanner" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:6px 16px;font-size:.82rem;font-weight:600;position:relative;z-index:9999;cursor:pointer" onclick="this.style.display='none'"   title="点击关闭 · 若版本号低于 v2026-08-03-21:40 说明浏览器缓存了旧版">
-  📦 工作台版本 <b>v2026-08-05 (13:30)</b> · 随手记+语音+备份 · 点击关闭此条
+  📦 工作台版本 <b>v2026-08-06 (11:15)</b> · 看板+导入+趋势 · 点击关闭此条
 </div>
 <div class="layout">
   <div class="mask" id="mask" onclick="closeSide()"></div>
@@ -520,6 +549,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     <div class="grp">总览</div>
     <a data-view="dashboard" class="active"><span class="ico">🏠</span>驾驶舱</a>
     <a data-view="tasks"><span class="ico">🗂</span>任务台账</a>
+    <a data-view="kanban"><span class="ico">📋</span>任务看板</a>
+    <a data-view="trend"><span class="ico">📊</span>数据趋势</a>
     <div class="grp">管控维度（拖动可排序）</div>
     <div id="dimNav"></div>
     <div class="grp">会议 & 汇报</div>
@@ -529,14 +560,16 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     <a data-view="reports"><span class="ico">📋</span>工作汇总</a>
     <a data-view="notes"><span class="ico">📝</span>工作笔记</a>
     <a data-view="automation"><span class="ico">⚙️</span>自动化规则</a>
+    <a data-view="recycled"><span class="ico">🗑️</span>回收站</a>
     <a data-view="settings"><span class="ico">🔧</span>设置 / 备份</a>
-    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-05<br>13:30 · 随手记+语音+备份</div>
+    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-06<br>11:15 · 看板+导入+趋势</div>
   </nav>
 
   <main class="main">
     <div class="topbar">
       <button class="btn ghost sm menu-btn" onclick="openSide()">☰</button>
       <div class="ttl" id="viewTitle">驾驶舱</div>
+      <input id="globalSearch" type="search" placeholder="🔍 搜索任务 / 报告…" style="flex:1;min-width:120px;max-width:260px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:.88rem" oninput="onGlobalSearch(this.value)">
       <div class="tools">
         <button class="btn ghost sm" onclick="exportJSON()">⬆ 导出备份</button>
         <button class="btn ghost sm" onclick="importJSON()">⬇ 导入</button>
@@ -622,6 +655,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
         <span style="font-size:1.4rem;flex-shrink:0">📝</span>
         <div><b>工作笔记 & 会议纪要</b><br><span class="muted" style="font-size:.86rem">每天写笔记，AI 帮你提炼总结和待办；会议纪要能自动拆成任务。</span></div>
       </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;background:#f0f7ff;border-radius:10px;padding:10px 12px;border:1px solid #bae0ff">
+        <span style="font-size:1.4rem;flex-shrink:0">🤖</span>
+        <div><b>想用 AI 功能？先配置</b><br><span class="muted" style="font-size:.86rem">AI 拆解纪要、润色日报等需先配置：填「云端代理地址」或「API Key」。点下方「开始使用」会直接带你到设置页填好。</span></div>
+      </div>
       <div style="display:flex;gap:10px;align-items:flex-start;background:#fff8e6;border-radius:10px;padding:10px 12px;border:1px solid #ffe08a">
         <span style="font-size:1.4rem;flex-shrink:0">☁️</span>
         <div><b>记得常备份</b><br><span class="muted" style="font-size:.86rem">数据存在本浏览器，清缓存会丢。重要节点点右上角「⬆ 导出备份」，或在设置里配 GitHub 自动备份。</span></div>
@@ -629,7 +666,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     </div>
     <div class="acts" style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end">
       <button class="btn ghost sm" onclick="localStorage.setItem('wb_onboarded_v1','1');closeModal('onboardModal')">不再提示</button>
-      <button class="btn sm" style="background:var(--accent);color:#fff" onclick="localStorage.setItem('wb_onboarded_v1','1');closeModal('onboardModal')">🚀 开始使用</button>
+      <button class="btn sm" style="background:var(--accent);color:#fff" onclick="localStorage.setItem('wb_onboarded_v1','1');closeModal('onboardModal');navigateTo('settings')">🚀 开始使用并配置</button>
     </div>
   </div>
 </div>
@@ -785,8 +822,8 @@ function idbGet(k){return openDB().then(db=>new Promise((res,rej)=>{
 }));}
 
 /* ---------- [3] 数据地基 & 种子 ---------- */
-let data={ projects:[], tasks:[], notes:[], meetings:[], settings:{}, reports:[] };
-let currentView='dashboard', curDim=null, curGroupBy={}, curFilter='全部', kpiDetailType=null, curMonitorView={};
+let data={ projects:[], tasks:[], notes:[], meetings:[], settings:{}, reports:[], recycled:[] };
+let currentView='dashboard', curDim=null, curGroupBy={}, curFilter='全部', kpiDetailType=null, curMonitorView={}, _search='';
 
 function uid(){return 't'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function today(){const d=new Date(); return d.toISOString().slice(0,10);}
@@ -847,6 +884,7 @@ async function load(){
     // 新增字段迁移（兼容旧备份无 notes/reports 字段）
     if(!data.notes) data.notes=[];
     if(!data.reports) data.reports=[];
+    if(!data.recycled) data.recycled=[];
     // 旧报告补 id 和 archived 字段（兼容无 id 的备份）
     data.reports.forEach(x=>{ if(!x.id) x.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6); if(x.archived==null) x.archived=false; });
     if(!data.meetings) data.meetings=[];
@@ -898,12 +936,14 @@ document.getElementById('side').addEventListener('click',e=>{
 });
 
 function render(){
-  const titles={dashboard:'驾驶舱',tasks:'任务台账',ai:'AI 助手',reports:'工作汇总',automation:'自动化规则',settings:'设置 / 备份',notes:'工作笔记',meetings:'会议纪要',monitor:DIM[curDim]?DIM[curDim].label+' 监控':'监控','kpi-detail':KPI_DETAIL_TITLES[kpiDetailType]||'KPI详情'};
+  const titles={dashboard:'驾驶舱',tasks:'任务台账',kanban:'任务看板',trend:'数据趋势',ai:'AI 助手',reports:'工作汇总',automation:'自动化规则',settings:'设置 / 备份',notes:'工作笔记',meetings:'会议纪要',recycled:'回收站',monitor:DIM[curDim]?DIM[curDim].label+' 监控':'监控','kpi-detail':KPI_DETAIL_TITLES[kpiDetailType]||'KPI详情'};
   document.getElementById('viewTitle').textContent=titles[currentView]||'';
   const v=document.getElementById('view');
   try {
     if(currentView==='dashboard') v.innerHTML=renderDashboard();
     else if(currentView==='tasks') v.innerHTML=renderTasks();
+    else if(currentView==='kanban') v.innerHTML=renderKanban();
+    else if(currentView==='trend') v.innerHTML=renderTrend();
     else if(currentView==='monitor') v.innerHTML=renderMonitor(curDim);
     else if(currentView==='ai') v.innerHTML=renderAI();
     else if(currentView==='reports') v.innerHTML=renderReports();
@@ -912,6 +952,7 @@ function render(){
     else if(currentView==='notes') v.innerHTML=renderNotes();
     else if(currentView==='meetings') v.innerHTML=renderMeetings();
     else if(currentView==='kpi-detail') v.innerHTML=renderKpiDetail(kpiDetailType);
+    else if(currentView==='recycled') v.innerHTML=renderRecycled();
     else { v.innerHTML='<div class="muted" style="padding:40px;text-align:center">未知页面</div>'; return; }
   } catch(e) {
     // 渲染报错时显示错误信息，而不是残留上一次的内容
@@ -928,6 +969,9 @@ function render(){
   const b=document.getElementById('btnGoSettingsAI');
   if(b) b.addEventListener('click',function(){navigateTo('settings');});
 }
+/* ---------- [3c] 全局搜索 ---------- */
+function onGlobalSearch(v){ _search=v.trim(); render(); }
+function clearSearch(){ _search=''; const el=document.getElementById('globalSearch'); if(el) el.value=''; render(); }
 /* ---------- [4] 驾驶舱 ---------- */
 /* ---------- [9] 提醒 & 自动化（computeReminders → 驾驶舱/简报共用） ---------- */
 function computeReminders(){
@@ -1208,7 +1252,7 @@ function renderGantt(key, ts){
       actualBar=`<rect x="${axs}" y="${topAxis+i*rowH+18}" width="${Math.max(2,axe-axs)}" height="10" rx="3" fill="${col}"><title>${esc(tip)}</title></rect>`;
     }
     const mile = t.isMilestone? `<path d="M ${pe} ${topAxis+i*rowH+9} l 6 -6 l 6 6 l -6 6 z" fill="${col}" stroke="#fff" stroke-width="1"><title>关键节点/里程碑</title></path>`:'';
-    return `<g>
+    return `<g class="tk" onclick="openTaskModal('${t.id}')" style="cursor:pointer">
       <text x="8" y="${topAxis+i*rowH+13}" class="gt-l">${label}</text>
       <text x="8" y="${topAxis+i*rowH+27}" class="gt-s">${sub}</text>
       <rect x="${ps}" y="${topAxis+i*rowH+4}" width="${Math.max(2,pe-ps)}" height="10" rx="3" fill="#e3f2fd" stroke="#90caf9" stroke-width="1"><title>${esc(tip)}</title></rect>
@@ -1218,7 +1262,7 @@ function renderGantt(key, ts){
   }).join('');
   const grid = ticks.map(t=>{ const x=xOf(t); const m=t.getMonth()+1; return `<line x1="${x}" y1="${topAxis-6}" x2="${x}" y2="${H-8}" stroke="#eee" stroke-width="1"/>` + (m===1?`<text x="${x}" y="${topAxis-14}" class="gt-axis" text-anchor="middle">${t.getFullYear()}年</text>`:`<text x="${x}" y="${topAxis-14}" class="gt-axis" text-anchor="middle">${m}月</text>`); }).join('');
   const todayLine = tInside? `<line x1="${xOf(today)}" y1="${topAxis-6}" x2="${xOf(today)}" y2="${H-8}" stroke="#e53935" stroke-width="1.5" stroke-dasharray="4 3"/><text x="${xOf(today)}" y="${topAxis-24}" class="gt-today" text-anchor="middle">今天</text>`:'';
-  return `<svg width="100%" viewBox="0 0 ${W} ${H}" class="gantt-svg">${grid}${todayLine}${rows}</svg>
+  return `<div class="gantt-scroll"><svg width="100%" viewBox="0 0 ${W} ${H}" class="gantt-svg">${grid}${todayLine}${rows}</svg></div>
   <div class="gantt-legend">
     <span><i style="background:#e3f2fd;border:1px solid #90caf9"></i>计划</span>
     <span><i style="background:#2e7d32"></i>已完成</span>
@@ -1228,12 +1272,14 @@ function renderGantt(key, ts){
     <span><i style="background:#fff;border:1px solid #555"></i>◆里程碑</span>
     <span style="color:#e53935;font-weight:600">┊ 今天</span>
   </div>
-  <div class="muted" style="margin-top:6px">浅蓝条 = 计划工期；实色条 = 实际工期（按状态着色，绿=已完成 / 蓝=进行中 / 红=滞后 / 灰=未开始）。悬停条形查看详情；◆ 为关键节点/里程碑。任务需填写计划开始/完成日期才进入甘特图。</div>`;
+  <div class="muted" style="margin-top:6px">浅蓝条 = 计划工期；实色条 = 实际工期（按状态着色，绿=已完成 / 蓝=进行中 / 红=滞后 / 灰=未开始）。悬停条形查看详情；<b>点击任意任务条可打开编辑</b>；◆ 为关键节点/里程碑。任务需填写计划开始/完成日期才进入甘特图。</div>`;
 }
 
 /* ---------- 任务台账（全部任务） ---------- */
 function renderTasks(){
-  const list=(curFilter&&curFilter!=='全部项目')? data.tasks.filter(t=>projName(t.projectId)===curFilter) : data.tasks;
+  let list=(curFilter&&curFilter!=='全部项目')? data.tasks.filter(t=>projName(t.projectId)===curFilter) : data.tasks;
+  if(_search){ const q=_search.toLowerCase();
+    list=list.filter(t=> (t.title||'').toLowerCase().includes(q) || (t.owner||'').toLowerCase().includes(q) || (projName(t.projectId)||'').toLowerCase().includes(q) || (DIM[t.dimension]?DIM[t.dimension].label:'-').toLowerCase().includes(q) || (t.content||'').toLowerCase().includes(q)); }
   const rows=list.slice().sort((a,b)=> (a.due||'9999').localeCompare(b.due||'9999')).map(t=>{
     const d=DIM[t.dimension];
     return `<tr class="row-link" onclick="openTaskModal('${t.id}')"><td>${esc(projName(t.projectId))}</td><td>${d?d.icon+' '+d.label:'-'}</td><td>${esc(t.title)}</td><td><span class="tag ${statusClass(d,t.status)}">${esc(t.status)}</span></td><td>${esc(t.owner)}</td><td>${esc(t.due)}</td><td>${reviewCell(t)}</td></tr>`;
@@ -1257,19 +1303,245 @@ function renderTasks(){
     </div>
     <div class="muted" style="margin-top:6px;font-size:.74rem">先一句话存下来，回头在列表里点开那一行补全楼栋/责任人/截止日即可。</div>
   </div>
-  <div class="tools" style="margin-bottom:12px">${projFilter}${fsBtn}<span class="muted">共 ${data.tasks.length} 条任务${data.settings.feishu&&data.settings.feishu.lastSync?(' · 上次同步 '+esc(data.settings.feishu.lastSync.slice(0,16).replace('T',' '))):''}</span></div>
+  <div class="tools" style="margin-bottom:12px">${projFilter}${fsBtn}<button class="btn ghost sm" onclick="openImportModal()">📥 导入</button><span class="muted">共 ${list.length} 条任务${_search?(' · 搜索「'+esc(_search)+'」'):''}${data.settings.feishu&&data.settings.feishu.lastSync?(' · 上次同步 '+esc(data.settings.feishu.lastSync.slice(0,16).replace('T',' '))):''}</span>${_search?'<button class="btn ghost sm" onclick="clearSearch()">✕ 清除搜索</button>':''}</div>
   <div class="panel"><table><thead><tr><th>项目</th><th>维度</th><th>事项</th><th>状态</th><th>责任人</th><th>截止</th><th>复核/来源</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 function reviewCell(t){
   const src = t.source==='feishu' ? '<span class="tag" style="background:#e8f0fe;color:#1a73e8">飞书</span> ' : '';
   if(t.reviewed===false){
     if(t.source==='feishu') return src+`<button class="btn ghost sm" style="padding:1px 6px;font-size:.72rem" onclick="event.stopPropagation();markReviewed('${t.id}')">✓复核</button>`;
-    return src+'<span class="tag warn">AI待复核</span>';
+    return src+'<span class="tag warn">AI待复核</span> <button class="btn ghost sm" style="padding:1px 6px;font-size:.72rem" onclick="event.stopPropagation();markReviewed(\'${t.id}\')">✓复核</button>';
   }
   return src+'<span class="tag ok">已核</span>';
 }
 function renderTasksFilter(){render();}
 function filterRows(){}
+
+/* ================= 新增：任务看板 / 数据趋势 / 批量导入 ================= */
+
+/* ---------- 任务看板（按状态分列，拖拽改状态） ---------- */
+function renderKanban(){
+  const cols=['未开始','进行中','滞后','已完成'];
+  const map={}; cols.forEach(c=>map[c]=[]); map['其他']=[];
+  data.tasks.forEach(t=>{ const s=t.status||'未开始'; (map[s]?map[s]:map['其他']).push(t); });
+  const showCols=cols.concat(map['其他'].length?['其他']:[]);
+  const colHtml=showCols.map(col=>{
+    const items=map[col];
+    const cards=items.length? items.map(t=>kbCard(t)).join('') : '<div class="kb-empty">拖拽任务到此</div>';
+    return `<div class="kb-col" ondragover="kbAllowDrop(event)" ondragleave="kbLeave(event)" ondrop="kbDrop(event,'${esc(col)}')">
+      <div class="kb-col-h"><span>${esc(col)}</span><span class="kb-cnt">${items.length}</span></div>
+      <div class="kb-cards">${cards}</div>
+    </div>`;
+  }).join('');
+  return `<div class="kb-wrap">${colHtml}</div>
+    <div class="muted" style="margin-top:8px">💡 电脑：拖动卡片可改状态；手机：点卡片底部「状态下拉」改状态；点卡片本身可编辑详情。</div>`;
+}
+function kbCard(t){
+  const d=DIM[t.dimension];
+  return `<div class="kb-card" draggable="true" ondragstart="kbDrag(event,'${t.id}')" onclick="openTaskModal('${t.id}')">
+    <div class="kb-card-t">${esc(t.title)}</div>
+    <div class="kb-card-m">${esc(projName(t.projectId))} ${d?d.icon:''}</div>
+    <div class="kb-card-f">
+      <span class="tag ${statusClass(d,t.status)}">${esc(t.status)}</span>
+      ${t.owner?`<span class="muted">👤${esc(t.owner)}</span>`:''}
+      ${t.due?`<span class="muted">📅${esc(t.due)}</span>`:''}
+    </div>
+    <select class="kb-sel" onclick="event.stopPropagation()" onchange="kbSetStatus('${t.id}',this.value)">${['未开始','进行中','滞后','已完成'].map(s=>`<option ${t.status===s?'selected':''}>${s}</option>`).join('')}</select>
+  </div>`;
+}
+function kbDrag(e,id){ e.dataTransfer.setData('text/plain',id); e.dataTransfer.effectAllowed='move'; }
+function kbAllowDrop(e){ e.preventDefault(); e.currentTarget.classList.add('kb-over'); }
+function kbLeave(e){ e.currentTarget.classList.remove('kb-over'); }
+function kbDrop(e,status){
+  e.preventDefault(); e.currentTarget.classList.remove('kb-over');
+  const id=e.dataTransfer.getData('text/plain');
+  const t=data.tasks.find(x=>x.id===id);
+  if(t && t.status!==status){ t.status=status; t.updatedAt=today(); save(); render(); toast('已移到「'+status+'」'); }
+}
+function kbSetStatus(id,status){
+  const t=data.tasks.find(x=>x.id===id);
+  if(t){ t.status=status; t.updatedAt=today(); save(); render(); }
+}
+
+/* ---------- 数据趋势（纯 SVG 手绘，无外部库） ---------- */
+function polar(cx,cy,r,deg){ const a=deg*Math.PI/180; return {x:cx+r*Math.cos(a), y:cy+r*Math.sin(a)}; }
+function donut(segs,size){
+  const total=segs.reduce((a,b)=>a+b.value,0);
+  if(total===0) return '<div class="muted">暂无数据</div>';
+  const r=size/2-16, cx=size/2, cy=size/2, sw=22;
+  let ang=-90;
+  const parts=segs.filter(s=>s.value>0).map(s=>{
+    const frac=s.value/total;
+    if(frac>=0.999){ return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${s.color}" stroke-width="${sw}"/>`; }
+    const a2=ang+frac*360;
+    const p1=polar(cx,cy,r,ang), p2=polar(cx,cy,r,a2);
+    const large=frac>0.5?1:0;
+    ang=a2;
+    return `<path d="M${p1.x.toFixed(1)} ${p1.y.toFixed(1)} A${r} ${r} 0 ${large} 1 ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}" fill="none" stroke="${s.color}" stroke-width="${sw}" stroke-linecap="butt"/>`;
+  }).join('');
+  const center=`<text x="${cx}" y="${cy-3}" text-anchor="middle" font-size="20" font-weight="700" fill="#1f2328">${total}</text><text x="${cx}" y="${cy+14}" text-anchor="middle" font-size="11" fill="#57606a">任务</text>`;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${parts}${center}</svg>`;
+}
+function lineChart(points,w,h){
+  const max=Math.max(1,...points.map(p=>p.value));
+  const pad=30, n=points.length;
+  const bw=n>1?(w-pad*2)/(n-1):0;
+  const x=i=>pad+i*bw;
+  const y=v=>h-pad-(v/max)*(h-pad*2);
+  const pts=points.map((p,i)=>`${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
+  const dots=points.map((p,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(p.value).toFixed(1)}" r="3" fill="#2f81f7"/><text x="${x(i).toFixed(1)}" y="${(h-9)}" text-anchor="middle" font-size="9" fill="#57606a">${esc(p.label)}</text><text x="${x(i).toFixed(1)}" y="${(y(p.value)-6).toFixed(1)}" text-anchor="middle" font-size="9" fill="#1f2328">${p.value}</text>`).join('');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="#d0d7de"/><polyline points="${pts}" fill="none" stroke="#2f81f7" stroke-width="2"/>${dots}</svg>`;
+}
+function renderTrend(){
+  const tasks=data.tasks;
+  const statusOrder=['未开始','进行中','滞后','已完成'];
+  const statusColors={'未开始':'#9e9e9e','进行中':'#1565c0','滞后':'#c62828','已完成':'#2e7d32'};
+  const byStatus={}; statusOrder.forEach(s=>byStatus[s]=0);
+  tasks.forEach(t=>{ if(byStatus[t.status]!=null) byStatus[t.status]++; });
+  const statusSegs=statusOrder.map(s=>({label:s,value:byStatus[s],color:statusColors[s]}));
+  const byDim={}; DIMENSIONS.forEach(d=>byDim[d.label]=0);
+  tasks.forEach(t=>{ const d=DIM[t.dimension]; if(d) byDim[d.label]++; });
+  const dimMax=Math.max(1,...Object.values(byDim));
+  const dimBars=Object.entries(byDim).filter(([k,v])=>v>0).map(([k,v])=>{
+    const pct=Math.round(v/dimMax*100);
+    return `<div style="display:flex;align-items:center;gap:8px;margin:5px 0;font-size:.82rem"><div style="width:84px;flex-shrink:0;color:var(--sub)">${k}</div><div style="flex:1;background:#eaeef2;border-radius:4px;height:16px;overflow:hidden"><div style="width:${pct}%;background:var(--accent);height:100%"></div></div><div style="width:34px;text-align:right;font-weight:600">${v}</div></div>`;
+  }).join('') || '<div class="muted">暂无任务</div>';
+  const byMonth={}; tasks.forEach(t=>{ const m=(t.createdAt||'').slice(0,7); if(m) byMonth[m]=(byMonth[m]||0)+1; });
+  const months=Object.keys(byMonth).sort();
+  const linePts=months.map(m=>({label:m.slice(2),value:byMonth[m]}));
+  const lineSvg=months.length? lineChart(linePts,560,190) : '<div class="muted">暂无足够数据（需多条带创建日期的任务，导入或新建后自动统计）</div>';
+  return `<div class="panel"><h3>📊 数据趋势</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px">
+      <div><div class="trend-h">状态分布</div>${donut(statusSegs,180)}<div class="trend-legend">${statusSegs.map(s=>`<span><i style="background:${s.color}"></i>${s.label} ${s.value}</span>`).join('')}</div></div>
+      <div><div class="trend-h">各维度任务数</div>${dimBars}</div>
+      <div style="grid-column:1/-1"><div class="trend-h">每月新增任务</div>${lineSvg}</div>
+    </div>
+  </div>`;
+}
+
+/* ---------- 批量导入（CSV 文件 / 从 Excel 复制粘贴，零依赖） ---------- */
+const _IMP_HMAP={
+  '标题':['标题','事项','任务','task','title','名称'],
+  '项目':['项目','工程','project'],
+  '维度':['维度','类别','dimension','dim'],
+  '状态':['状态','status'],
+  '责任人':['责任人','负责人','owner','责任'],
+  '截止':['截止','截止日期','完成日期','duedate','due'],
+  '优先级':['优先级','priority','紧急度'],
+  '进度':['进度','完成率','进度%','progress'],
+  '楼栋':['楼栋','区域','部位','building'],
+  '专业':['专业','major'],
+  '计划开始':['计划开始','planstart'],
+  '计划完成':['计划完成','planend'],
+  '备注':['备注','说明','内容','notes','remark']
+};
+let _impTasks=[];
+function _normH(h){ return (h||'').trim().toLowerCase().replace(/\s+/g,''); }
+function _csvSplit(line){
+  const out=[]; let cur=''; let q=false;
+  for(let i=0;i<line.length;i++){ const c=line[i];
+    if(q){ if(c==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else { if(c==='"') q=true; else if(c===','){ out.push(cur); cur=''; } else cur+=c; }
+  }
+  out.push(cur); return out;
+}
+function _parseDelimited(text){
+  text=(text||'').replace(/^﻿/,'');
+  const delim=text.includes('\t')?'\t':',';
+  const lines=text.split(/\r?\n/).filter(l=>l.trim()!=='');
+  if(!lines.length) return [];
+  return lines.map(line=> delim==='\t'? line.split('\t') : _csvSplit(line));
+}
+function _mapDim(v){ if(!v) return 'progress'; const s=v.trim(); const d=DIMENSIONS.find(x=>x.label===s||x.key===s); return d?d.key:'progress'; }
+function _mapStatus(dimKey,v){
+  const d=DIM[dimKey]; const s=(v||'').trim();
+  if(!s) return (d.statusOpts&&d.statusOpts[0])||'未开始';
+  if(d.statusOpts&&d.statusOpts.includes(s)) return s;
+  if(['未开始','进行中','已完成','滞后'].includes(s)) return s;
+  return (d.statusOpts&&d.statusOpts[0])||'未开始';
+}
+function openImportModal(){
+  const body=`<div class="imp-tip">
+    <p style="margin:0 0 8px">支持两种方式（任选其一）：</p>
+    <ol style="margin:0 0 8px 18px;padding:0">
+      <li><b>CSV 文件</b>：Excel 里「另存为 → CSV(UTF-8)」后选文件；</li>
+      <li><b>从 Excel 复制</b>：选中单元格区域 → Ctrl+C → 粘贴到下方文本框。</li>
+    </ol>
+    <label class="fld">① 选 CSV 文件</label>
+    <input id="impFile" type="file" accept=".csv,.txt" onchange="impFileToText(this)">
+    <label class="fld">② 或直接粘贴（Excel 复制的内容 / CSV 文本，首行是表头）</label>
+    <textarea id="impText" rows="6" placeholder="标题,项目,维度,状态,责任人,截止,优先级,进度%,楼栋/区域,专业,计划开始,计划完成,备注&#10;3#楼消防管打压,金燕路项目,进度,进行中,张工,2026-09-30,高,60,3#楼,消防,2026-09-01,2026-09-30,示例"></textarea>
+    <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+      <button class="btn ghost sm" onclick="impDownloadTmpl()">⬇ 下载CSV模板</button>
+      <button class="btn sm" onclick="impParse()">🔍 解析预览</button>
+    </div>
+    <div id="impPreview" style="margin-top:10px"></div>
+  </div>`;
+  document.getElementById('genModalT').textContent='📥 批量导入任务';
+  document.getElementById('genModalBody').innerHTML=body;
+  document.getElementById('genModalActs').innerHTML='<button class="btn ghost" onclick="closeModal(\'genModal\')">关闭</button>';
+  showModal('genModal');
+}
+function impFileToText(el){
+  const f=el.files&&el.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=function(){ const ta=document.getElementById('impText'); if(ta) ta.value=r.result; impParse(); };
+  r.readAsText(f,'UTF-8');
+}
+function impDownloadTmpl(){
+  const csv='标题,项目,维度,状态,责任人,截止,优先级,进度%,楼栋/区域,专业,计划开始,计划完成,备注\n3#楼消防管打压试验,金燕路项目,进度,进行中,张工,2026-09-30,高,60,3#楼,消防,2026-09-01,2026-09-30,示例数据请替换\n2#楼配电箱进场,金燕路项目,物资设备,进场,李工,,中,,,电气,2026-08-15,,材料已到场';
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='任务导入模板.csv'; a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);},2000);
+}
+function impParse(){
+  const ta=document.getElementById('impText'); if(!ta) return;
+  const rows=_parseDelimited(ta.value);
+  if(rows.length<2){ document.getElementById('impPreview').innerHTML='<div class="warnbox">没有可解析的数据，请确认粘贴了带表头的数据表。</div>'; return; }
+  const header=rows[0].map(_normH);
+  const col={};
+  Object.keys(_IMP_HMAP).forEach(field=>{
+    const syns=_IMP_HMAP[field];
+    const idx=header.findIndex(h=> syns.some(s=> h.indexOf(s)>=0));
+    if(idx>=0) col[field]=idx;
+  });
+  if(col['标题']==null){ document.getElementById('impPreview').innerHTML='<div class="warnbox">未找到「标题」列，请确认表头含「标题 / 事项 / 任务」之一。</div>'; return; }
+  _impTasks=[]; let skip=0;
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i];
+    const get=f=> col[f]!=null ? (r[col[f]]||'').trim() : '';
+    const title=get('标题'); if(!title){ skip++; continue; }
+    const dimKey=_mapDim(get('维度'));
+    const projNameV=get('项目');
+    let pid='';
+    if(projNameV){ let p=data.projects.find(x=>x.name===projNameV); if(!p){ p={id:uid(),name:projNameV,status:'进行中',createdAt:today()}; data.projects.push(p); } pid=p.id; }
+    if(!pid) pid=data.projects[0]?data.projects[0].id:'';
+    const prog=get('进度'); const pv=parseInt(prog);
+    const t={ id:uid(), projectId:pid, dimension:dimKey, title:title, status:_mapStatus(dimKey,get('状态')),
+      owner:get('责任人'), due:get('截止'), priority:(['高','中','低'].indexOf(get('优先级'))>=0?get('优先级'):'中'),
+      notes:get('备注'), reviewed:true, source:'import', createdAt:today(), updatedAt:today() };
+    if(dimKey==='progress'){ t.progress=isNaN(pv)?0:pv; }
+    if(get('楼栋')) t.buildingArea=get('楼栋');
+    if(get('专业')) t.major=get('专业');
+    if(get('计划开始')) t.planStart=get('计划开始');
+    if(get('计划完成')) t.planEnd=get('计划完成');
+    _impTasks.push(t);
+  }
+  const prev=`<div class="warnbox" style="background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32">✅ 解析出 <b>${_impTasks.length}</b> 条任务（跳过空行 ${skip} 条）。确认后导入：</div>
+    <div style="max-height:200px;overflow:auto;margin-top:8px;font-size:.82rem">
+    <table><thead><tr><th>项目</th><th>维度</th><th>标题</th><th>状态</th><th>责任人</th></tr></thead><tbody>
+    ${_impTasks.slice(0,50).map(t=>`<tr><td>${esc(projName(t.projectId))}</td><td>${DIM[t.dimension]?DIM[t.dimension].label:'-'}</td><td>${esc(t.title)}</td><td>${esc(t.status)}</td><td>${esc(t.owner)}</td></tr>`).join('')}
+    </tbody></table>${_impTasks.length>50?'<div class="muted">…仅显示前 50 条</div>':''}</div>`;
+  document.getElementById('impPreview').innerHTML=prev;
+  document.getElementById('genModalActs').innerHTML=`<button class="btn ghost" onclick="closeModal('genModal')">取消</button><button class="btn" style="background:var(--ok);color:#fff" onclick="impConfirm()">✅ 确认导入 ${_impTasks.length} 条</button>`;
+}
+function impConfirm(){
+  if(!_impTasks.length) return;
+  data.tasks=data.tasks.concat(_impTasks);
+  _impTasks=[];
+  save(); closeModal('genModal'); render();
+  toast('已导入任务 ✓');
+}
 
 /* ---------- [5] 任务增删改 ---------- */
 let editingId=null;
@@ -1500,7 +1772,12 @@ function saveTask(){
   if(!editingId) data.tasks.push(t);
   save(); closeModal('taskModal'); render();
 }
-function deleteTask(){ if(!editingId)return; if(!confirm('确认删除该任务？'))return; data.tasks=data.tasks.filter(x=>x.id!==editingId); save(); closeModal('taskModal'); render(); }
+function deleteTask(){ if(!editingId)return; if(!confirm('确认删除该任务？删除后可从左侧「🗑️ 回收站」恢复。'))return;
+  const t=data.tasks.find(x=>x.id===editingId); if(!t)return;
+  data.recycled.unshift({type:'task', item:t, deletedAt:nowStr()});
+  data.tasks=data.tasks.filter(x=>x.id!==editingId);
+  save(); closeModal('taskModal'); render();
+  showToast('已删除任务，可到「回收站」恢复'); }
 
 /* ---------- [5b] 随手记 / 常用模板（极简快速录入，降低放弃率） ---------- */
 function toast(msg){
@@ -1511,6 +1788,7 @@ function toast(msg){
   t.textContent=msg; t.style.opacity='1';
   clearTimeout(t._timer); t._timer=setTimeout(function(){t.style.opacity='0';},1800);
 }
+function showToast(m){ toast(m); }
 function _newTask(title, dim, status){
   const pid = data.projects.length? data.projects[0].id : '';
   data.tasks.push({
@@ -1618,6 +1896,22 @@ async function markReviewed(id){
     if(ok) alert('已标记已复核，并回写飞书【工作台账】（关掉扣子的防错闸）✅');
     else alert('本工作台已标记已复核，但回写飞书失败（检查代理/网络）。飞书侧需你手动改复核状态。');
   }
+}
+
+/* ---------- 一键批量复核（AI待复核） ---------- */
+async function batchReviewAll(){
+  const pending=data.tasks.filter(t=>t.reviewed===false);
+  if(!pending.length){ alert('当前没有待复核任务 👍'); return; }
+  if(!confirm('确认将 '+pending.length+' 条「AI待复核」任务全部标记为已复核？\n\n（飞书来源的任务会同时回写飞书工作台账；非飞书来源仅在本工作台标记）')) return;
+  let feishuN=0, feishuOk=0;
+  for(const t of pending){
+    t.reviewed=true; t.updatedAt=today();
+    if(t.source==='feishu'&&t.feishuId){ feishuN++; if(await feishuReview(t.feishuId)) feishuOk++; }
+  }
+  save(); render();
+  let msg='已批量复核 '+pending.length+' 条 ✅';
+  if(feishuN) msg+='\n· 其中飞书来源 '+feishuN+' 条，成功回写 '+feishuOk+' 条'+(feishuN!==feishuOk?'（'+(feishuN-feishuOk)+' 条回写失败，飞书侧需手动改）':'');
+  alert(msg);
 }
 
 /* ---------- [6] AI 双模式（与错题管家同一契约：POST /chat，body={model,messages}） ---------- */
@@ -1886,6 +2180,9 @@ function exportJSON(){
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download='pm-workbench-'+today()+'.json'; a.click();
+  if(!data.settings.backup)data.settings.backup={};
+  data.settings.backup.lastBackupAt=new Date().toISOString();
+  save();
   alert('已导出 JSON。请把它存到 OneDrive（本文件已在 OneDrive 目录则自动同步）。');
 }
 function importJSON(){
@@ -2140,6 +2437,9 @@ async function githubBackup(){
   const body={message:'pm-workbench backup '+new Date().toISOString()+' (keys stripped)',content}; if(sha)body.sha=sha;
   const r=await fetch(api,{method:'PUT',headers:Object.assign({'Content-Type':'application/json'},hd),body:JSON.stringify(body)});
   if(!r.ok) throw new Error('GitHub备份失败 '+r.status);
+  if(!data.settings.backup)data.settings.backup={};
+  data.settings.backup.lastBackupAt=new Date().toISOString();
+  save();
   return true;
 }
 async function githubRestore(){
@@ -2237,6 +2537,7 @@ function renderSettings(){
       <button class="btn" onclick="doGHB('backup')">⬆ 备份到GitHub</button>
       <button class="btn ghost" onclick="doGHB('restore')">⬇ 从GitHub恢复</button>
     </div>
+    <div class="muted" style="margin-top:8px">上次备份：${s.backup&&s.backup.lastBackupAt?esc(s.backup.lastBackupAt.slice(0,16).replace('T',' ')):'从未'}</div>
   </div>
   <div class="panel"><h3>🔗 飞书同步（接入扣子「拆条入表」工作流）</h3>
     <div class="muted">把扣子在飞书群里写进的【工作台账】，一键拉进本工作台，合成统一台账；还能在工作台标记「已复核」并回写飞书，接上扣子的防错闸。飞书密钥在阿里云代理，不在本机。</div>
@@ -2251,6 +2552,11 @@ function renderSettings(){
   <div class="panel"><h3>🔔 提醒 & 显示</h3>
     <label class="fld">临期提前提醒天数</label>
     <input id="s-ahead" type="number" value="${s.remindAhead}" style="width:120px">
+    <label class="fld">自动备份提醒</label>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:5px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="s-bkremind" ${data.settings.backupRemind!==false?'checked':''}> 开启</label>
+      <span class="muted">超过</span><input id="s-bkdays" type="number" value="${data.settings.backupRemindDays||7}" style="width:64px"><span class="muted">天未备份则提醒</span>
+    </div>
     <label class="fld">字体大小</label>
     <div class="fscale">
       <button class="${s.fontScale==1?'on':''}" onclick="setFont(1)">标准</button>
@@ -2320,6 +2626,8 @@ function saveSettings(){
   s.feishu=s.feishu||{syncUrl:'',lastSync:'',auto:false};
   s.feishu.syncUrl=document.getElementById('s-fsurl').value.trim();
   s.remindAhead=parseInt(document.getElementById('s-ahead').value)||3;
+  s.backupRemind=document.getElementById('s-bkremind').checked;
+  s.backupRemindDays=parseInt(document.getElementById('s-bkdays').value)||7;
   save(); alert('已保存'); render();
 }
 function setFont(v){data.settings.fontScale=v; applyFontScale(); saveSettings();}
@@ -2371,10 +2679,12 @@ function renderReports(){
       <button class="chip" onclick="aiReport('工作总结')" style="flex:1;min-width:90px;text-align:center;padding:8px 12px">📊 工作总结</button>
     </div>
   </div>
-  <div class="panel"><h3>📑 已生成报告（${r.filter(x=>!x.archived).length}）</h3>
+  <div class="panel"><h3>📑 已生成报告（${r.filter(x=>!x.archived).length}${_search?(' · 搜索「'+esc(_search)+'」'):''}）</h3>
     ${(()=>{
-      const active=r.filter(x=>!x.archived);
-      const archived=r.filter(x=>x.archived);
+      const _q=_search?_search.toLowerCase():'';
+      const _match=x=> !_q || (x.type||'').toLowerCase().includes(_q) || (x.at||'').toLowerCase().includes(_q) || (x.content||'').toLowerCase().includes(_q);
+      const active=r.filter(x=>!x.archived && _match(x));
+      const archived=r.filter(x=>x.archived && _match(x));
       const card=(x)=>`<div class="report-card" id="report-${x.id}" style="border:1px solid var(--line);border-radius:9px;margin-bottom:8px;overflow:hidden">
         <div class="report-header" onclick="toggleReport('${x.id}')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;cursor:pointer;background:#fafafa;transition:background .15s" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='#fafafa'">
           <div style="display:flex;align-items:center;gap:8px">
@@ -2692,7 +3002,7 @@ const KPI_DETAIL_TITLES={
 function showKpiDetail(type){ kpiDetailType=type; currentView='kpi-detail'; render(); }
 /* ---------- [4c] KPI 详情（统计卡片点击下钻） ---------- */
 function renderKpiDetail(type){
-  const tasks=data.tasks; let items=[]; let title=''; let desc='';
+  const tasks=data.tasks; let items=[]; let title=''; let desc=''; let batchBtn=''; let rowReview=false;
   const ahead=data.settings.remindAhead||3;
 
   // ── 项目详情（从看板卡片点击） ──
@@ -2729,7 +3039,7 @@ function renderKpiDetail(type){
   if(type==='total'){ items=tasks; title='📋 全部任务'; desc='共 '+tasks.length+' 条任务，按状态分组展示'; }
   else if(type==='lag'){ items=tasks.filter(t=>t.status==='滞后'); title='⚠️ 滞后任务'; desc=items.length+' 项任务已超出计划时间，需重点关注'; }
   else if(type==='dueSoon'){ items=tasks.filter(t=>{const d=DIM[t.dimension];return t.due&&!(d&&d.closed&&d.closed.includes(t.status))&&daysBetween(today(),t.due)!=null&&daysBetween(today(),t.due)<=ahead&&daysBetween(today(),t.due)>=0;}); title='⏰ 临期任务'; desc='截止日期在未来 '+ahead+' 天内，共 '+items.length+' 项'; }
-  else if(type==='review'){ items=tasks.filter(t=>t.reviewed===false); title='🔍 AI待复核'; desc='AI生成/导入后尚未人工复核的任务，共 '+items.length+' 项'; }
+  else if(type==='review'){ items=tasks.filter(t=>t.reviewed===false); title='🔍 AI待复核'; desc='AI生成/导入后尚未人工复核的任务，共 '+items.length+' 项'; batchBtn='<button class="btn" style="background:var(--ok);color:#fff" onclick="batchReviewAll()">✅ 一键全部复核 ('+items.length+')</button>'; rowReview=true; }
   else if(type==='loopOpen'){ items=tasks.filter(t=>{const d=DIM[t.dimension];return d&&d.type==='loop'&&!(d.closed||[]).includes(t.status);}); title='🔄 闭环未完'; desc='质量/安全/巡检等需闭环的维度中尚未完成的项，共 '+items.length+' 项'; }
   else if(type==='riskRed'){ items=tasks.filter(t=>t.dimension==='risk'&&t.level==='红'); title='🔴 红色风险'; desc='高风险等级事项，需立即处置，共 '+items.length+' 项'; }
   else if(type==='riskYel'){ items=tasks.filter(t=>t.dimension==='risk'&&t.level==='黄'); title='🟡 黄色风险'; desc='关注级风险事项，共 '+items.length+' 项'; }
@@ -2772,6 +3082,7 @@ function renderKpiDetail(type){
   <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <button class="btn ghost" onclick="navigateTo('dashboard')">← 返回驾驶舱</button>
     <span class="muted">${desc}</span>
+    ${batchBtn}
   </div>
 
   <!-- 统计概览（紧凑横排 · 可点击筛选） -->
@@ -2798,7 +3109,7 @@ function renderKpiDetail(type){
   <!-- 详细进展展板：任务列表 -->
   <div class="panel"><h3>📋 详细进展</h3>
   <table>
-    <tr><th>任务</th><th>项目</th><th>维度</th><th>状态</th><th>优先级</th><th>截止</th><th>进度</th></tr>
+    <tr><th>任务</th><th>项目</th><th>维度</th><th>状态</th><th>优先级</th><th>截止</th><th>进度</th>${rowReview?'<th>复核</th>':''}</tr>
     ${filteredItems.map(t=>{
       const d=DIM[t.dimension];
       const progBar=t.progress!=null?`<div class="bar" style="width:100px;display:inline-block;vertical-align:middle"><i style="width:${t.progress}%"></i></div> ${t.progress}%`:'—';
@@ -2810,6 +3121,7 @@ function renderKpiDetail(type){
         <td>${t.priority||'—'}</td>
         <td>${t.due||'—'}</td>
         <td>${progBar}</td>
+        ${rowReview?`<td><button class="btn ghost sm" style="padding:2px 8px;font-size:.75rem" onclick="event.stopPropagation();markReviewed('${t.id}')">✓ 复核</button></td>`:''}
       </tr>`;
     }).join('')||'<tr><td colspan="7" class="muted">'+(filterLabel?'筛选条件下无数据':'暂无数据')+'</td></tr>'}
   </table>
@@ -3403,9 +3715,53 @@ function toggleReport(id){
   if(icon) icon.style.transform=isHidden?'rotate(90deg)':'rotate(0)';
 }
 function deleteReport(id){
-  if(!confirm('确定删除这条报告？'))return;
+  if(!confirm('确定删除这条报告？删除后可从左侧「🗑️ 回收站」恢复。'))return;
   const i=reportIdx(id); if(i<0)return;
+  const x=data.reports[i];
+  data.recycled.unshift({type:'report', item:x, deletedAt:nowStr()});
   data.reports.splice(i,1); save(); render();
+  showToast('已删除报告，可到「回收站」恢复');
+}
+/* ---------- [12] 回收站 ---------- */
+function renderRecycled(){
+  const list=data.recycled||[];
+  if(!list.length) return `<div class="panel"><h3>🗑️ 回收站</h3><div class="muted" style="padding:20px;text-align:center">回收站是空的。删除的任务 / 报告会先到这里，可随时恢复，避免误删丢失。</div></div>`;
+  const row=(it,idx)=>{
+    const x=it.item;
+    const title = it.type==='task' ? (x.title||'(无标题任务)') : (x.type||'报告');
+    const sub = it.type==='task' ? (projName(x.projectId)+' · '+(DIM[x.dimension]?DIM[x.dimension].label:'-')+' · '+(x.status||'')) : (x.at||'');
+    return `<tr>
+      <td><span class="tag" style="background:#eee">${it.type==='task'?'任务':'报告'}</span></td>
+      <td><b>${esc(title)}</b></td>
+      <td class="muted" style="font-size:.82rem">${esc(sub)}</td>
+      <td class="muted" style="font-size:.82rem">${esc(it.deletedAt||'')}</td>
+      <td>
+        <button class="btn ghost sm" onclick="restoreFromRecycled(${idx})">♻️ 恢复</button>
+        <button class="btn ghost sm" onclick="purgeRecycled(${idx})">🗑 彻底删除</button>
+      </td>
+    </tr>`;
+  };
+  return `<div class="panel"><h3>🗑️ 回收站（${list.length}）</h3>
+    <div class="note">这里存放你删除的任务 / 报告。点「恢复」放回原处；点「彻底删除」将永久清除、不可恢复。</div>
+    <div class="tools" style="margin-bottom:8px"><button class="btn ghost sm" onclick="purgeAllRecycled()">🧹 清空回收站</button></div>
+    <table><thead><tr><th>类型</th><th>名称</th><th>信息</th><th>删除时间</th><th>操作</th></tr></thead><tbody>
+      ${list.map(row).join('')}
+    </tbody></table></div>`;
+}
+function restoreFromRecycled(idx){
+  const it=(data.recycled||[])[idx]; if(!it)return;
+  if(it.type==='task'){ if(!data.tasks.find(t=>t.id===it.item.id)) data.tasks.push(it.item); }
+  else if(it.type==='report'){ if(!data.reports.find(r=>r.id===it.item.id)) data.reports.push(it.item); }
+  data.recycled.splice(idx,1); save(); render();
+  showToast('已恢复到原处');
+}
+function purgeRecycled(idx){
+  if(!confirm('彻底删除此项？此操作不可恢复。'))return;
+  (data.recycled||[]).splice(idx,1); save(); render();
+}
+function purgeAllRecycled(){
+  if(!confirm('清空回收站？所有内容将永久删除、不可恢复。'))return;
+  data.recycled=[]; save(); render();
 }
 function archiveReport(id){
   const i=reportIdx(id); if(i<0)return;
@@ -3464,6 +3820,29 @@ function showOnboarding(){
   if(m) m.classList.add('show');
 }
 
+function checkBackupRemind(){
+  try{
+    const s=data.settings;
+    if(s.backupRemind===false) return;                 // 用户关闭了提醒
+    const days=s.backupRemindDays||7;
+    const last=(s.backup&&s.backup.lastBackupAt)? new Date(s.backup.lastBackupAt):null;
+    const now=new Date();
+    const y=now.getFullYear(), m=String(now.getMonth()+1).padStart(2,'0'), d=String(now.getDate()).padStart(2,'0');
+    const todayStr=y+'-'+m+'-'+d;
+    if(localStorage.getItem('wb_backup_remind_date')===todayStr) return; // 同一天只提醒一次
+    let overdue=false;
+    if(!last){ overdue = !!(data.tasks&&data.tasks.length>0); }          // 有数据却从未备份 → 提醒
+    else { const diff=Math.floor((now-last)/86400000); if(diff>=days) overdue=true; }
+    if(overdue){
+      localStorage.setItem('wb_backup_remind_date', todayStr);
+      const lastTxt=last? last.toISOString().slice(0,10):'从未';
+      if(confirm('⚠️ 备份提醒\n\n你已有 '+days+' 天未做数据备份（上次：'+lastTxt+'）。\n\n数据仅存于本浏览器，清缓存或换设备会丢失。\n建议现在点「⬆ 导出JSON」或「备份到GitHub」。\n\n点「确定」前往设置页处理备份。')){
+        navigateTo('settings');
+      }
+    }
+  }catch(e){}
+}
+
 (async function init(){
   // ── 版本横幅自动隐藏（5秒后）──
   const vb=document.getElementById('verBanner');
@@ -3474,6 +3853,7 @@ function showOnboarding(){
   await load();
   render();
   showOnboarding();
+  checkBackupRemind();
 })();
 
 </script>
