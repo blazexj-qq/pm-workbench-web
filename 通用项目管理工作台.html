@@ -154,8 +154,8 @@ label.fld{display:block;font-size:.85rem;color:var(--sub);margin:6px 0 2px}
 .todo-card.done-card .todo-text{text-decoration:line-through;color:#94a3b8}
 .todo-check{width:20px;height:20px;border-radius:5px;border:2px solid #cbd5e1;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:2px;transition:all .15s}
 .todo-check.checked{background:var(--ok);border-color:var(--ok);color:#fff}
-.todo-body{flex:1;min-width:0}
-.todo-text{font-size:.92rem;line-height:1.5}
+.todo-body{flex:1;min-width:0;overflow:hidden}
+.todo-text{font-size:.92rem;line-height:1.5;word-break:break-word;overflow-wrap:break-word}
 .todo-meta{display:flex;gap:8px;margin-top:4px;align-items:center;flex-wrap:wrap}
 .todo-status-tag{font-size:.75rem;padding:2px 8px;border-radius:10px;font-weight:500}
 .todo-status-tag.pending{background:#fef3c7;color:#92400e}
@@ -164,7 +164,11 @@ label.fld{display:block;font-size:.85rem;color:var(--sub);margin:6px 0 2px}
 .todo-delay-input{font-size:.8rem;padding:3px 8px;border:1px solid var(--line);border-radius:6px;width:160px;color:var(--sub)}
 .todo-del{color:#ccc;cursor:pointer;font-size:.85rem;padding:2px 6px;border-radius:4px;transition:all .15s}
 .todo-del:hover{color:var(--bad);background:#fef2f2}
-.todo-status-sel{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2364748b'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center;background-size:10px;padding-right:22px}
+.todo-move{display:inline-flex;flex-direction:column;gap:0;margin-left:2px}
+.todo-mv{width:20px;height:15px;line-height:13px;text-align:center;font-size:.6rem;color:#64748b;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;cursor:pointer;padding:0;transition:all .15s}
+.todo-mv:hover:not(:disabled){background:#e2e8f0;color:var(--accent)}
+.todo-mv:disabled{opacity:.3;cursor:not-allowed}
+.todo-status-sel{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2364748b'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center;background-size:10px;padding-right:22px;min-width:100px;max-width:130px;white-space:nowrap}
 .notes-archive-toggle{font-size:.82rem;color:var(--accent);cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin:8px 0}
 .notes-archive-toggle:hover{text-decoration:underline}
 .notes-empty{text-align:center;padding:40px 20px;color:var(--sub)}
@@ -534,8 +538,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
       <button class="btn ghost sm menu-btn" onclick="openSide()">☰</button>
       <div class="ttl" id="viewTitle">驾驶舱</div>
       <div class="tools">
-        <button class="btn ghost sm" onclick="exportJSON()">⬇ 导出备份</button>
-        <button class="btn ghost sm" onclick="importJSON()">⬆ 导入</button>
+        <button class="btn ghost sm" onclick="exportJSON()">⬆ 导出备份</button>
+        <button class="btn ghost sm" onclick="importJSON()">⬇ 导入</button>
         <button class="btn ghost sm" onclick="openTaskModal()">＋ 新建任务</button>
       </div>
     </div>
@@ -597,6 +601,36 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     <h3 id="genModalT">提示</h3>
     <div id="genModalBody"></div>
     <div class="acts" id="genModalActs"></div>
+  </div>
+</div>
+
+<!-- [10b] 首次引导弹窗 -->
+<div class="modal-bg" id="onboardModal" style="z-index:60">
+  <div class="modal" style="max-width:560px">
+    <h3 style="margin-top:0">👋 欢迎使用「通用项目管理工作台」</h3>
+    <p class="muted" style="margin:6px 0 14px">第一次打开？花 30 秒认识四个核心区域，后面用起来就顺了。</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:10px;align-items:flex-start;background:#f6f8fa;border-radius:10px;padding:10px 12px">
+        <span style="font-size:1.4rem;flex-shrink:0">🗂</span>
+        <div><b>任务台账</b><br><span class="muted" style="font-size:.86rem">按 11 个管控维度（进度/质量/安全…）记任务，每个维度自带甘特图看进度。</span></div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;background:#f6f8fa;border-radius:10px;padding:10px 12px">
+        <span style="font-size:1.4rem;flex-shrink:0">📋</span>
+        <div><b>工作汇总</b><br><span class="muted" style="font-size:.86rem">一键生成日报 / 周报 / 月报，还能导出 Word、PDF。</span></div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;background:#f6f8fa;border-radius:10px;padding:10px 12px">
+        <span style="font-size:1.4rem;flex-shrink:0">📝</span>
+        <div><b>工作笔记 & 会议纪要</b><br><span class="muted" style="font-size:.86rem">每天写笔记，AI 帮你提炼总结和待办；会议纪要能自动拆成任务。</span></div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;background:#fff8e6;border-radius:10px;padding:10px 12px;border:1px solid #ffe08a">
+        <span style="font-size:1.4rem;flex-shrink:0">☁️</span>
+        <div><b>记得常备份</b><br><span class="muted" style="font-size:.86rem">数据存在本浏览器，清缓存会丢。重要节点点右上角「⬆ 导出备份」，或在设置里配 GitHub 自动备份。</span></div>
+      </div>
+    </div>
+    <div class="acts" style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn ghost sm" onclick="localStorage.setItem('wb_onboarded_v1','1');closeModal('onboardModal')">不再提示</button>
+      <button class="btn sm" style="background:var(--accent);color:#fff" onclick="localStorage.setItem('wb_onboarded_v1','1');closeModal('onboardModal')">🚀 开始使用</button>
+    </div>
   </div>
 </div>
 
@@ -813,6 +847,8 @@ async function load(){
     // 新增字段迁移（兼容旧备份无 notes/reports 字段）
     if(!data.notes) data.notes=[];
     if(!data.reports) data.reports=[];
+    // 旧报告补 id 和 archived 字段（兼容无 id 的备份）
+    data.reports.forEach(x=>{ if(!x.id) x.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6); if(x.archived==null) x.archived=false; });
     if(!data.meetings) data.meetings=[];
     await save();
   } else { seed(); await save(); }
@@ -1027,7 +1063,7 @@ function renderDashboard(){
   }).join('')+(rem.length>10?'<div class="muted" style="padding:4px 10px;font-size:.8rem">...还有 '+(rem.length-10)+' 条提醒</div>':'')+'</div>') : '<div class="muted" style="padding:12px;text-align:center">一切正常 ✅</div>';
 
   return `
-  <div class="db-note"><span class="db-note-icon">💡</span><span>数据存于本机浏览器，建议定期「⬇导出备份」至 OneDrive；进阶可开启 GitHub 云端备份与飞书同步。</span></div>
+  <div class="db-note"><span class="db-note-icon">💡</span><span>数据存于本机浏览器，建议定期「⬆导出备份」至 OneDrive；进阶可开启 GitHub 云端备份与飞书同步。</span></div>
   ${renderDailyBrief()}
   ${statBar}
   <div class="db-layout">
@@ -1770,7 +1806,7 @@ async function aiReport(type){
     const c=await aiChat([{role:'system',content:sys},{role:'user',content:'当前数据：\n'+ctx+'\n\n请生成'+type+'。'}],{temp:0.4, signal});
     const el=document.getElementById('aiOut'); if(el) el.innerHTML=`<div class="md">${miniMd(c)}</div>`;
     // 同时存一份到报告列表
-    data.reports.unshift({type,content:c,at:new Date().toLocaleString()}); save();
+    data.reports.unshift({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),type,content:c,at:new Date().toLocaleString(),archived:false}); save();
     if(currentView==='reports') render(); // 在汇总页生成后自动刷新列表
   },'生成中…');
 }
@@ -1813,9 +1849,9 @@ async function aiRun(fn,loading){
     stopBtn.onclick = () => {
       if(_aiAbortCtrl) _aiAbortCtrl.abort();
       clearInterval(timerInterval);
-      document.getElementById('genModalBody').innerHTML = '<div style="text-align:center;padding:30px 16px"><div style="font-size:2rem;margin-bottom:10px">🛑</div><div style="font-weight:600;font-size:1rem">已停止 AI 处理</div><div class="muted" style="margin-top:8px">你可以关闭此窗口后重试或调整内容</div></div>';
-      // 隐藏操作按钮区
-      document.getElementById('genModalActs').innerHTML = '';
+      const stoppedHtml = '<div style="text-align:center;padding:30px 16px"><div style="font-size:2rem;margin-bottom:10px">🛑</div><div style="font-weight:600;font-size:1rem">已停止 AI 处理</div><div class="muted" style="margin-top:8px">你可以关闭此窗口后重试或调整内容</div></div>';
+      document.getElementById('genModalBody').innerHTML = stoppedHtml;
+      document.getElementById('genModalActs').innerHTML = '<button class="btn" onclick="closeModal(\'genModal\')" style="margin-top:8px">✕ 关闭</button>';
     };
   }
 
@@ -1823,13 +1859,22 @@ async function aiRun(fn,loading){
     // 把 signal 注入到 opts 中，让 aiChat 的 fetch 能响应中断
     await fn(_aiAbortCtrl.signal);
     clearInterval(timerInterval);
+    // 若 fn 未自行更新弹窗（仍显示进度中），则显示完成提示
+    const bodyEl = document.getElementById('genModalBody');
+    if(bodyEl && bodyEl.querySelector('.ai-spinner')) {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      bodyEl.innerHTML = '<div style="text-align:center;padding:30px 16px"><div style="font-size:2rem;margin-bottom:10px">✅</div><div style="font-weight:600;font-size:1rem">AI 处理完成</div><div class="muted" style="margin-top:8px">共用时 '+elapsed+' 秒</div></div>';
+      document.getElementById('genModalActs').innerHTML = '<button class="btn" onclick="closeModal(\'genModal\')" style="margin-top:8px">✕ 关闭</button>';
+    }
   } catch(e) {
     clearInterval(timerInterval);
     if(e.name === 'AbortError') {
-      document.getElementById('genModalBody').innerHTML = '<div style="text-align:center;padding:30px 16px"><div style="font-size:2rem;margin-bottom:10px">🛑</div><div style="font-weight:600;font-size:1rem">已停止 AI 处理</div><div class="muted" style="margin-top:8px">你可以关闭此窗口后重试或调整内容</div></div>';
-      document.getElementById('genModalActs').innerHTML = '';
+      const stoppedHtml = '<div style="text-align:center;padding:30px 16px"><div style="font-size:2rem;margin-bottom:10px">🛑</div><div style="font-weight:600;font-size:1rem">已停止 AI 处理</div><div class="muted" style="margin-top:8px">你可以关闭此窗口后重试或调整内容</div></div>';
+      document.getElementById('genModalBody').innerHTML = stoppedHtml;
+      document.getElementById('genModalActs').innerHTML = '<button class="btn" onclick="closeModal(\'genModal\')" style="margin-top:8px">✕ 关闭</button>';
     } else {
       document.getElementById('genModalBody').innerHTML='<div class="warnbox">❌ '+esc(e.message)+'</div>';
+      document.getElementById('genModalActs').innerHTML = '<button class="btn ghost" onclick="closeModal(\'genModal\')" style="margin-top:8px">✕ 关闭</button>';
     }
   } finally {
     _aiAbortCtrl = null;
@@ -2178,7 +2223,10 @@ function renderSettings(){
   <div class="panel"><h3>☁️ GitHub 云端备份</h3>
     <div class="muted">把整个台账数据 JSON 推送到你的 GitHub 仓库（免费、跨设备可恢复）。Token 仅存本机。</div>
     <label class="fld">GitHub Token（repo 权限，存本机）</label>
-    <input id="b-token" value="${esc(s.backup.token)}" placeholder="ghp_...">
+    <div style="display:flex;gap:6px;align-items:center">
+      <input id="b-token" type="password" value="${esc(s.backup.token)}" placeholder="ghp_..." style="flex:1" oninput="document.getElementById('b-token-toggle').dataset.val=this.value">
+      <button id="b-token-toggle" type="button" onclick="const t=document.getElementById('b-token');const b=this;if(t.type==='password'){t.type='text';b.textContent='🙈';}else{t.type='password';b.textContent='👁';}" title="显示/隐藏 Token" style="padding:4px 8px;cursor:pointer;border:1px solid #ccc;background:#f8f8f8;border-radius:4px;font-size:.95rem;flex-shrink:0">👁</button>
+    </div>
     <label class="fld">仓库所有者(用户名)</label>
     <input id="b-owner" value="${esc(s.backup.owner)}">
     <label class="fld">仓库名</label>
@@ -2212,8 +2260,8 @@ function renderSettings(){
   </div>
   <div class="panel"><h3>💾 本地数据</h3>
     <div class="tools">
-      <button class="btn ghost" onclick="exportJSON()">⬇ 导出JSON(OneDrive)</button>
-      <button class="btn ghost" onclick="importJSON()">⬆ 导入JSON</button>
+      <button class="btn ghost" onclick="exportJSON()">⬆ 导出JSON(OneDrive)</button>
+      <button class="btn ghost" onclick="importJSON()">⬇ 导入JSON</button>
       <button class="btn danger ghost" onclick="resetData()">恢复示例数据</button>
     </div>
     <div class="muted" style="margin-top:8px">数据存本机浏览器(IndexedDB)。iOS/清理会丢，务必定期导出或开GitHub备份。</div>
@@ -2315,16 +2363,49 @@ function renderReports(){
     </div>
   </div>
   <div class="panel"><h3>🗓 一键生成（AI）</h3>
-    <div class="tools">
-      <button class="chip" onclick="aiReport('日报')">📅 日报</button>
-      <button class="chip" onclick="aiReport('周报')">📆 周报</button>
-      <button class="chip" onclick="aiReport('月报')">🗓 月报</button>
-      <button class="chip" onclick="aiReport('会议纪要')">📝 会议纪要</button>
-      <button class="chip" onclick="aiReport('工作总结')">📊 工作总结</button>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      <button class="chip" onclick="aiReport('日报')" style="flex:1;min-width:80px;text-align:center;padding:8px 12px">📅 日报</button>
+      <button class="chip" onclick="aiReport('周报')" style="flex:1;min-width:80px;text-align:center;padding:8px 12px">📆 周报</button>
+      <button class="chip" onclick="aiReport('月报')" style="flex:1;min-width:80px;text-align:center;padding:8px 12px">🗓 月报</button>
+      <button class="chip" onclick="aiReport('会议纪要')" style="flex:1;min-width:90px;text-align:center;padding:8px 12px">📝 会议纪要</button>
+      <button class="chip" onclick="aiReport('工作总结')" style="flex:1;min-width:90px;text-align:center;padding:8px 12px">📊 工作总结</button>
     </div>
   </div>
-  <div class="panel"><h3>📑 已生成报告（${r.length}）</h3>
-    ${r.length? r.map((x,i)=>`<div style="border:1px solid var(--line);border-radius:9px;padding:10px;margin-bottom:8px"><div style="display:flex;justify-content:space-between"><b>${esc(x.type)}</b><span class="muted">${esc(x.at)}</span></div><div class="md" style="margin-top:6px">${miniMd(x.content)}</div><div class="tools" style="margin-top:6px"><button class="btn ghost sm" onclick="copyReport(${i})">复制</button></div></div>`).join('') : '<div class="muted">还没有生成报告</div>'}
+  <div class="panel"><h3>📑 已生成报告（${r.filter(x=>!x.archived).length}）</h3>
+    ${(()=>{
+      const active=r.filter(x=>!x.archived);
+      const archived=r.filter(x=>x.archived);
+      const card=(x)=>`<div class="report-card" id="report-${x.id}" style="border:1px solid var(--line);border-radius:9px;margin-bottom:8px;overflow:hidden">
+        <div class="report-header" onclick="toggleReport('${x.id}')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;cursor:pointer;background:#fafafa;transition:background .15s" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='#fafafa'">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="report-toggle-icon" id="report-icon-${x.id}" style="font-size:.75rem;transition:transform .2s">▶</span>
+            <b style="font-size:.9rem">${esc(x.type)}</b>
+          </div>
+          <span class="muted" style="font-size:.78rem">${esc(x.at)}</span>
+        </div>
+        <div class="report-body" id="report-body-${x.id}" style="display:none;padding:10px 12px;border-top:1px solid var(--line)">
+          <div class="md" style="margin-bottom:8px;max-height:50vh;overflow:auto">${miniMd(x.content)}</div>
+          <div class="tools" style="gap:6px;flex-wrap:wrap">
+            <button class="btn ghost sm" onclick="event.stopPropagation();copyReport('${x.id}')">📋 复制</button>
+            <button class="btn ghost sm" onclick="event.stopPropagation();exportReport('${x.id}','md')">📄 MD</button>
+            <button class="btn ghost sm" onclick="event.stopPropagation();exportReport('${x.id}','txt')">📝 TXT</button>
+            <button class="btn ghost sm" onclick="event.stopPropagation();exportReportWord('${x.id}')">📊 Word</button>
+            <button class="btn ghost sm" onclick="event.stopPropagation();printReport('${x.id}')">🖨 PDF</button>
+            ${x.archived?'<button class="btn ghost sm" onclick="event.stopPropagation();unarchiveReport(\''+x.id+'\')">📤 取消归档</button>':'<button class="btn ghost sm" onclick="event.stopPropagation();archiveReport(\''+x.id+'\')">📦 归档</button>'}
+            <button class="btn ghost sm" onclick="event.stopPropagation();deleteReport('${x.id}')">🗑 删除</button>
+          </div>
+        </div>
+      </div>`;
+      const activeHtml=active.length?active.map(card).join(''):'<div class="muted">还没有生成报告。用上方「一键生成」按钮创建。</div>';
+      const archivedHtml=archived.length?`<div style="margin-top:10px;border-top:1px dashed var(--line);padding-top:8px">
+        <div class="report-header" onclick="toggleEl('archived-reports')" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px 0">
+          <span class="report-toggle-icon" id="archived-reports-icon" style="font-size:.7rem">▶</span>
+          <span class="muted" style="font-size:.82rem;font-weight:600">📦 已归档报告（${archived.length}）</span>
+        </div>
+        <div id="archived-reports" style="display:none;margin-top:6px">${archived.map(card).join('')}</div>
+      </div>`:'';
+      return activeHtml+archivedHtml;
+    })()}
   </div>`;
 }
 
@@ -2780,6 +2861,8 @@ function renderNotes(){
   function todoHtml(t){
     const isDone=t.status==='done';
     const isDelayed=t.status==='delayed';
+    const idx=note.todos.findIndex(x=>x.id===t.id);
+    const atTop=idx<=0, atBottom=idx>=note.todos.length-1;
     return `
     <div class="todo-card ${isDone?'done-card':''}" id="todo-${t.id}">
       <select class="todo-status-sel" onchange="changeTodoStatus('${note.id}','${t.id}',this.value)" style="padding:3px 6px;border-radius:6px;border:2px solid ${isDone?'var(--ok)':isDelayed?'var(--bad)':'var(--warn)'};font-size:.82rem;font-weight:600;cursor:pointer;background:#fff;flex-shrink:0;margin-top:1px">
@@ -2792,6 +2875,10 @@ function renderNotes(){
         <div class="todo-meta">
           ${isDelayed?`<input class="todo-delay-input" placeholder="延期原因..." value="${esc(t.delayReason||'')}" onchange="updateTodoDelay('${note.id}','${t.id}',this.value)">`:''}
           ${isDone?`<span class="muted" style="font-size:.78rem">${t.doneAt||''}</span>`:''}
+          <span class="todo-move">
+            <button class="todo-mv" title="上移" ${atTop?'disabled':''} onclick="moveTodo('${note.id}','${t.id}','up')">▲</button>
+            <button class="todo-mv" title="下移" ${atBottom?'disabled':''} onclick="moveTodo('${note.id}','${t.id}','down')">▼</button>
+          </span>
           <span class="todo-del" onclick="deleteTodo('${note.id}','${t.id}')">✕ 删除</span>
         </div>
       </div>
@@ -2817,22 +2904,41 @@ function renderNotes(){
     <h3>✍️ 今日工作记录</h3>
     <div class="note-editor" style="position:relative">
       <textarea id="noteContent" placeholder="在这里记录今天做了什么、开了什么会、沟通了哪些事项...&#10;&#10;示例：&#10;1. 上午参加金燕路项目周例会，讨论1#楼消防验收进度滞后问题&#10;2. 下午与创豪集团确认水电A-1标段材料进场计划&#10;3. 审核二标消防专业分包二级技术交底稿">${esc(note.content)}</textarea>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-        <button class="voice-btn" id="btnVoiceInput" onclick="startVoiceInput()">🎤 语音输入</button>
-        <span class="voice-hint" id="voiceHint"></span>
-      </div>
     </div>
-    <div class="note-actions">
-      <button class="btn" onclick="saveNoteContent()">💾 保存笔记</button>
-      <button class="btn" style="background:var(--accent);color:#fff" onclick="aiGenerateSummary('${dateStr}')" id="btnAiGen">🤖 AI 生成总结+待办</button>
+    <!-- 操作按钮行：统一紧凑排列 -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center">
+      <button class="btn sm" onclick="startVoiceInput()" id="btnVoiceInput" title="语音输入">🎤 语音</button>
+      <span class="voice-hint" id="voiceHint" style="font-size:.82rem"></span>
+      <div style="flex:1"></div>
+      <button class="btn sm" onclick="saveNoteContent()">💾 保存</button>
+      <button class="btn sm" onclick="exportNote('${dateStr}','md')">📄 MD</button>
+      <button class="btn sm" onclick="exportNote('${dateStr}','txt')">📝 TXT</button>
+      <button class="btn sm" onclick="exportNoteWord('${dateStr}')">📊 Word</button>
+      <button class="btn sm" onclick="printNote('${dateStr}')">🖨 打印</button>
+      <button class="btn sm" style="background:var(--accent);color:#fff" onclick="aiGenerateSummary('${dateStr}')" id="btnAiGen">🤖 AI 总结</button>
     </div>
   </div>
 
-  <!-- AI 总结（生成后显示） -->
+  <!-- AI 总结（生成后显示，可折叠） -->
   ${note.summary?`
-  <div class="ai-gen-section">
-    <h3 style="margin-top:0">📋 AI 生成的今日总结</h3>
-    <div class="ai-summary">${esc(note.summary)}</div>
+  <div class="panel" style="margin-bottom:16px">
+    <div class="report-header" onclick="toggleEl('ai-summary-body')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;cursor:pointer">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="report-toggle-icon" id="ai-summary-icon" style="font-size:.75rem;transition:transform .2s">▶</span>
+        <h3 style="margin:0;font-size:.95rem">📋 AI 生成的今日总结</h3>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center" onclick="event.stopPropagation()">
+        <button class="btn ghost sm" onclick="copyText(document.getElementById('ai-summary-content').textContent)">📋 复制</button>
+        <button class="btn ghost sm" onclick="exportAiSummary('${dateStr}','md')">📄 MD</button>
+        <button class="btn ghost sm" onclick="exportAiSummary('${dateStr}','txt')">📝 TXT</button>
+        <button class="btn ghost sm" onclick="exportNoteWord('${dateStr}')">📊 Word</button>
+        <button class="btn ghost sm" onclick="printNote('${dateStr}')">🖨 打印</button>
+        <button class="btn ghost sm" onclick="clearAiSummary('${dateStr}')">🗑 清除</button>
+      </div>
+    </div>
+    <div id="ai-summary-body" style="display:none;padding-top:8px;border-top:1px solid var(--line);margin-top:6px">
+      <div id="ai-summary-content" class="ai-summary" style="max-height:40vh;overflow:auto;white-space:pre-wrap;line-height:1.7">${esc(note.summary)}</div>
+    </div>
   </div>`:''}
 
   <!-- 待办事项 -->
@@ -2940,8 +3046,74 @@ ${note.content}`;
   }).catch(err=>{
     console.error('AI生成失败:',err);
     alert('AI 生成失败：'+(err.message||'未知错误'));
-    if(btn){btn.disabled=false;btn.textContent='🤖 AI 生成总结+待办';}
+    if(btn){btn.disabled=false;btn.textContent='🤖 AI 总结';}
   });
+}
+
+// 笔记导出
+function exportNote(dateStr,fmt){
+  const note=data.notes.find(n=>n.date===dateStr); if(!note)return;
+  const ext=fmt==='md'?'md':'txt';
+  let content='';
+  if(fmt==='md'){
+    content='# '+dateStr+' 工作记录\n\n## 笔记\n'+note.content+'\n';
+    if(note.summary){content+='## AI总结\n'+note.summary+'\n';}
+    if(note.todos.length){content+='## 待办事项\n'+note.todos.map(t=>'- ['+(t.status==='done'?'x':' ')+'] '+t.text+(t.status==='delayed'?' ⚠️延期':'')).join('\n')+'\n';}
+  } else {
+    content=dateStr+' 工作记录\n'+('=' .repeat(30))+'\n\n'+note.content+'\n';
+    if(note.summary){content+='\n--- AI总结 ---\n'+note.summary+'\n';}
+    if(note.todos.length){content+='\n待办事项：\n'+note.todos.map(t=>(t.status==='done'?'[✓]':'[ ]')+' '+t.text).join('\n')+'\n';}
+  }
+  const blob=new Blob([content],{type:'text/'+(fmt==='md'?'markdown':'plain')+';charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='工作记录_'+dateStr+'.'+ext; a.click();
+}
+// 笔记导出 Word
+function exportNoteWord(dateStr){
+  const note=data.notes.find(n=>n.date===dateStr); if(!note)return;
+  let html='<h1>'+dateStr+' 工作记录</h1><h2>笔记</h2><p>'+note.content.replace(/\n/g,'<br>')+'</p>';
+  if(note.summary){html+='<h2>AI总结</h2><p>'+note.summary.replace(/\n/g,'<br>')+'</p>';}
+  if(note.todos.length){html+='<h2>待办事项</h2><ul>'+note.todos.map(t=>'<li>'+('[✅'+t.status+' ] ')+esc(t.text)+'</li>').join('')+'</ul>';}
+  const doc='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>工作记录</title></head><body style="font-family:微软雅黑,sans-serif;line-height:1.7">'+html+'</body></html>';
+  const blob=new Blob(['\ufeff'+doc],{type:'application/msword;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='工作记录_'+dateStr+'.doc'; a.click();
+}
+// 笔记打印（PDF）
+function printNote(dateStr){
+  const note=data.notes.find(n=>n.date===dateStr); if(!note)return;
+  let html='<h1>'+dateStr+' 工作记录</h1><h2>笔记</h2><p>'+note.content.replace(/\n/g,'<br>')+'</p>';
+  if(note.summary){html+='<h2>AI总结</h2><p>'+note.summary.replace(/\n/g,'<br>')+'</p>';}
+  if(note.todos.length){html+='<h2>待办事项</h2><ul>'+note.todos.map(t=>'<li>['+t.status+'] '+esc(t.text)+'</li>').join('')+'</ul>';}
+  const w=window.open('','_blank'); if(!w){alert('浏览器拦截了弹窗，请允许后重试');return;}
+  w.document.write('<html><head><meta charset="utf-8"><title>工作记录</title><style>body{font-family:微软雅黑,sans-serif;line-height:1.7;padding:30px;max-width:820px;margin:auto}h1,h2{color:#333}li{margin:4px 0}</style></head><body>'+html+'</body></html>');
+  w.document.close(); w.focus(); setTimeout(()=>w.print(),300);
+}
+
+// AI总结导出
+function exportAiSummary(dateStr,fmt){
+  const note=data.notes.find(n=>n.date===dateStr); if(!note||!note.summary)return;
+  const ext=fmt==='md'?'md':'txt';
+  const content=fmt==='md'? '# '+dateStr+' AI今日总结\n\n'+note.summary : dateStr+' AI今日总结\n'+note.summary;
+  const blob=new Blob([content],{type:'text/'+(fmt==='md'?'markdown':'plain')+';charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='AI总结_'+dateStr+'.'+ext; a.click();
+}
+
+// 清除AI总结
+function clearAiSummary(dateStr){
+  if(!confirm('确定清除该日 AI 总结？'))return;
+  const note=data.notes.find(n=>n.date===dateStr);
+  if(note){note.summary='';note.updatedAt=nowStr();save();render();}
+}
+
+// 通用折叠切换
+function toggleEl(id){
+  const el=document.getElementById(id); if(!el)return;
+  const icon=document.getElementById(id.replace('-body','-icon'));
+  const isHidden=el.style.display==='none';
+  el.style.display=isHidden?'block':'none';
+  if(icon) icon.style.transform=isHidden?'rotate(90deg)':'rotate(0)';
 }
 
 function toggleTodoStatus(noteId,todoId){
@@ -2986,6 +3158,16 @@ function restoreTodo(idx){
   if(note){ note.todos.unshift(item.todo); note.updatedAt=nowStr(); save(); }
   _deletedTodos.splice(idx,1);
   render();
+}
+
+/* [10b] 待办上下排序：在同一条笔记的 todos 数组里交换相邻两项 */
+function moveTodo(noteId,todoId,dir){
+  const note=data.notes.find(n=>n.id===noteId); if(!note)return;
+  const i=note.todos.findIndex(x=>x.id===todoId); if(i<0)return;
+  const j=dir==='up'?i-1:i+1;
+  if(j<0||j>=note.todos.length)return;
+  const tmp=note.todos[i]; note.todos[i]=note.todos[j]; note.todos[j]=tmp;
+  note.updatedAt=nowStr(); save(); render();
 }
 
 function addTodoManual(dateStr){
@@ -3210,7 +3392,52 @@ function showGen(title,body,acts){
   acts.forEach((a,i)=>{const el=document.getElementById('ga'+i); if(el&&a.fn) el.onclick=a.fn;});
   showModal('genModal');
 }
-function copyReport(i){ const x=(data.reports||[])[i]; if(x) copyText(x.content); }
+function reportIdx(id){ return (data.reports||[]).findIndex(x=>x.id===id); }
+function copyReport(id){ const i=reportIdx(id); const x=(data.reports||[])[i]; if(x) copyText(x.content); }
+function toggleReport(id){
+  const body=document.getElementById('report-body-'+id);
+  const icon=document.getElementById('report-icon-'+id);
+  if(!body)return;
+  const isHidden=body.style.display==='none';
+  body.style.display=isHidden?'block':'none';
+  if(icon) icon.style.transform=isHidden?'rotate(90deg)':'rotate(0)';
+}
+function deleteReport(id){
+  if(!confirm('确定删除这条报告？'))return;
+  const i=reportIdx(id); if(i<0)return;
+  data.reports.splice(i,1); save(); render();
+}
+function archiveReport(id){
+  const i=reportIdx(id); if(i<0)return;
+  data.reports[i].archived=true; save(); render();
+}
+function unarchiveReport(id){
+  const i=reportIdx(id); if(i<0)return;
+  data.reports[i].archived=false; save(); render();
+}
+function exportReport(id,fmt){
+  const i=reportIdx(id); const x=(data.reports||[])[i]; if(!x)return;
+  const ext=fmt==='md'?'md':'txt';
+  const mime=fmt==='md'?'text/markdown':'text/plain';
+  const blob=new Blob([fmt==='md'?x.content:x.content.replace(/[#*`]/g,'')],{type:mime+';charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=(x.type||'报告')+'_'+today()+'.'+ext; a.click();
+}
+// 导出报告为 Word（.doc，mhtml格式，无需外部库）
+function exportReportWord(id){
+  const i=reportIdx(id); const x=(data.reports||[])[i]; if(!x)return;
+  const html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>'+(x.type||'报告')+'</title></head><body style="font-family:微软雅黑,sans-serif;line-height:1.7">'+miniMd(x.content)+'</body></html>';
+  const blob=new Blob(['\ufeff'+html],{type:'application/msword;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=(x.type||'报告')+'_'+today()+'.doc'; a.click();
+}
+// 打印报告（浏览器可保存为PDF）
+function printReport(id){
+  const i=reportIdx(id); const x=(data.reports||[])[i]; if(!x)return;
+  const w=window.open('','_blank'); if(!w){alert('浏览器拦截了弹窗，请允许后重试');return;}
+  w.document.write('<html><head><meta charset="utf-8"><title>'+(x.type||'报告')+'</title><style>body{font-family:微软雅黑,sans-serif;line-height:1.7;padding:30px;max-width:820px;margin:auto}h1,h2,h3{color:#333}li{margin:4px 0}</style></head><body><h1>'+(x.type||'报告')+'</h1><p style="color:#888">生成时间：'+x.at+'</p>'+miniMd(x.content)+'</body></html>');
+  w.document.close(); w.focus(); setTimeout(()=>w.print(),300);
+}
 function copyText(s){
   try{
     if(navigator.clipboard&&window.isSecureContext){ navigator.clipboard.writeText(s); alert('已复制'); return; }
@@ -3230,6 +3457,13 @@ function miniMd(s){ // 极简 markdown→html（标题/列表/加粗/换行）
 }
 
 /* ---------- 启动 ---------- */
+/* [10b] 首次引导：未看过则弹出（localStorage 记忆，清浏览器缓存会再弹） */
+function showOnboarding(){
+  try{ if(localStorage.getItem('wb_onboarded_v1')) return; }catch(e){}
+  const m=document.getElementById('onboardModal');
+  if(m) m.classList.add('show');
+}
+
 (async function init(){
   // ── 版本横幅自动隐藏（5秒后）──
   const vb=document.getElementById('verBanner');
@@ -3239,6 +3473,7 @@ function miniMd(s){ // 极简 markdown→html（标题/列表/加粗/换行）
   initDimDrag();
   await load();
   render();
+  showOnboarding();
 })();
 
 </script>
