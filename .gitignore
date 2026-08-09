@@ -1,0 +1,11 @@
+# ===== 私有备份仓库：保留全部项目资产，仅排除临时文件 =====
+# 临时/缓存
+_tmp/
+__pycache__/
+*.pyc
+.DS_Store
+node_modules/
+
+# 系统文件
+Thumbs.db
+Desktop.ini
