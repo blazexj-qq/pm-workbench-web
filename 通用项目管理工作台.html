@@ -7,12 +7,12 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <!-- 版本号：每次修改必须更新此行，JS 会用它检测缓存 -->
-<meta name="app-version" content="v2026-08-09-07-35">
+<meta name="app-version" content="v2026-08-09-21-05">
 <script>
 // ── 缓存破坏层 1：bfcache（往返缓存）检测 ──
 // Edge 关闭浏览器后重开会从内存恢复旧页面，不重新加载文件
 (function(){
-  var EXPECTED='v2026-08-09-07-35';
+  var EXPECTED='v2026-08-09-21-05';
   var meta=document.querySelector('meta[name=app-version]');
   var ACTUAL=meta?meta.getAttribute('content'):'';
   // 检测 bfcache 恢复
@@ -616,7 +616,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
 <body>
 <!-- 版本横幅（每次改版必更新版本号 + meta[name=app-version]） -->
 <div id="verBanner" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:6px 16px;font-size:.82rem;font-weight:600;position:relative;z-index:9999;cursor:pointer" onclick="this.style.display='none'"   title="点击关闭 · 若版本号低于 v2026-08-03-21:40 说明浏览器缓存了旧版">
-  📦 工作台版本 <b>v2026-08-08 (07:15)</b> · 产值管理进阶：按任务完成时间归集累计产值曲线 + 按合同付款阶段（进度75%/完工80%/验收90%/结算95%/保修金5%）算可申请支付 · 点击关闭此条
+  📦 工作台版本 <b>v2026-08-09 (21:05)</b> · 修复任务台账 statusClass 崩溃(d.undefined.closed) · 点击关闭此条
 </div>
 <div class="layout">
   <div class="mask" id="mask" onclick="closeSide()"></div>
@@ -1401,7 +1401,7 @@ function renderMonitor(key){
     ${filteredTs.length?'<div class="muted" style="margin-top:8px">共 '+filteredTs.length+' 条'+(_curPF!=='全部'?'（已筛选项目）':'')+'</div>':'<div class="muted">暂无，点上方按钮新建</div>'}
   </div>`;
 }
-function statusClass(d,s){ if(s==='滞后'||s==='隐患'||s==='不合格'||s==='严重'&&false) return 'bad'; if(d.closed&&d.closed.includes(s)) return 'ok'; if(s==='整改中'||s==='进行中'||s==='申报中'||s==='履约中'||s==='已签发'||s==='发现问题') return 'warn'; if(s==='红')return 'bad'; if(s==='黄')return 'warn'; if(s==='绿')return 'ok'; return 'gray';}
+function statusClass(d,s){ if(!d) return 'gray'; if(s==='滞后'||s==='隐患'||s==='不合格'||s==='严重'&&false) return 'bad'; if(d.closed&&d.closed.includes(s)) return 'ok'; if(s==='整改中'||s==='进行中'||s==='申报中'||s==='履约中'||s==='已签发'||s==='发现问题') return 'warn'; if(s==='红')return 'bad'; if(s==='黄')return 'warn'; if(s==='绿')return 'ok'; return 'gray';}
 
 /* ---------- 进度甘特图（纯SVG手写，无CDN依赖） ---------- */
 function renderGantt(key, ts){
