@@ -210,8 +210,8 @@ th{color:var(--sub);font-weight:600;background:var(--soft)}
 /* 监控汇总区小标签 */
 .mon-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75rem;cursor:pointer;border:1px solid transparent;transition:all .15s}
 .mon-tag:hover{transform:scale(1.05);box-shadow:0 1px 4px rgba(0,0,0,.12)}
-.mon-del{text-align:center;white-space:nowrap;width:70px}
-.mon-del-btn{display:inline-block;width:20px;height:20px;line-height:18px;text-align:center;border-radius:4px;color:#c0c4cc;font-size:1rem;cursor:pointer;opacity:0;transition:all .15s}
+.mon-del{text-align:center;white-space:nowrap;width:80px}
+.mon-del-btn{display:inline-block;width:auto;height:20px;line-height:18px;text-align:center;border-radius:4px;color:#c62828;font-size:.82rem;cursor:pointer;opacity:1;transition:all .15s;padding:0 4px}
 tr.row-link:hover .mon-del-btn{opacity:1}
 .mon-del-btn:hover{background:#fee;color:#c62828;font-weight:700}
 .row-link{cursor:pointer} .row-link:hover{background:#f6f8fa}
@@ -1360,16 +1360,16 @@ function renderMonitor(key){
     if(d.type==='numeric'){ if(d.catField) extra=`<td><input class="inline-input" value="${esc(t.cat||'')}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','cat',this.value)" onclick="event.stopPropagation()"></td>`; extra+=`<td><input class="inline-input" value="${esc(t.plan||t.amount||'')}" onchange="event.stopPropagation();inlineUpdateField('${t.id}',${d.catField?'amount':'plan'},this.value)" onclick="event.stopPropagation()" style="width:80px"></td><td><input class="inline-input" value="${esc(t.actual||'')}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','actual',this.value)" onclick="event.stopPropagation()" style="width:80px"></td>`; }
     else if(d.type==='level'){ extra=`<td><select class="inline-sel tag ${t.level==='红'?'bad':t.level==='黄'?'warn':'ok'}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','level',this.value)"><option value="红" ${t.level==='红'?'selected':''}>红</option><option value="黄" ${t.level==='黄'?'selected':''}>黄</option><option value="绿" ${t.level==='绿'?'selected':''}>绿</option></select></td>`; }
     else { if(d.severity) extra=`<td><select class="inline-sel tag ${t.severity==='严重'?'bad':'gray'}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','severity',this.value)"><option value="一般" ${t.severity!=='严重'?'selected':''}>一般</option><option value="严重" ${t.severity==='严重'?'selected':''}>严重</option></select></td>`; }
-    return `<tr>
+    return `<tr class="row-link">
       <td>${esc(projName(t.projectId))}</td>
       <td><input class="inline-input inline-title" value="${esc(t.title)}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','title',this.value)" onclick="event.stopPropagation()" placeholder="编辑事项…"></td>
       <td><select class="inline-sel tag ${statusClass(d,t.status)}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','status',this.value)">${mStatusOpts.map(s=>`<option ${t.status===s?'selected':''}>${s}</option>`).join('')}</select></td>
       <td><input class="inline-input" value="${esc(t.owner||'')}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','owner',this.value)" onclick="event.stopPropagation()" placeholder="责任人" style="width:70px"></td>
       <td><input type="date" class="inline-input" value="${t.due||''}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','due',this.value)" onclick="event.stopPropagation()" style="width:120px"></td>
       <td>${extra}</td>
-      <td style="text-align:center;white-space:nowrap">
+      <td class="mon-del" style="width:80px">
         <button class="btn ghost sm" onclick="event.stopPropagation();openTaskModal('${t.id}')" title="打开完整编辑弹窗" style="padding:2px 6px;font-size:.8rem">✏️</button>
-        <span class="mon-del-btn" onclick="event.stopPropagation();if(confirm('确定删除「'+esc(t.title)+'」？')){deleteTask('${t.id}');render()}" title="删除">×</span>
+        <span class="mon-del-btn" onclick="event.stopPropagation();if(confirm('确定删除「'+esc(t.title)+'」？')){deleteTask('${t.id}');render()}" title="删除">🗑️</span>
       </td>
     </tr>`;
   }).join('');
