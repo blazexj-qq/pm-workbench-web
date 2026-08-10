@@ -8,6 +8,8 @@
 <meta http-equiv="Expires" content="0">
 <!-- 版本号：每次修改必须更新此行，JS 会用它检测缓存 -->
 <meta name="app-version" content="v2026-08-09-21-05">
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#4f46e5">
 <script>
 // ── 缓存破坏层 1：bfcache（往返缓存）检测 ──
 // Edge 关闭浏览器后重开会从内存恢复旧页面，不重新加载文件
@@ -4688,6 +4690,17 @@ function renderMilestoneStrip(){
   setTimeout(function(){ render(); }, 100);
 })();
 
+</script>
+
+<script>
+// PWA：注册 Service Worker，使应用可安装为桌面程序且支持离线打开
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function (e) {
+      console.warn('Service Worker 注册失败（不影响主程序正常使用）：', e);
+    });
+  });
+}
 </script>
 </body>
 </html>

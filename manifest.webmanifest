@@ -1,0 +1,16 @@
+{
+  "name": "通用项目管理工作台",
+  "short_name": "项目工作台",
+  "description": "建筑工程项目一体化管理：任务台账、看板、进度、质量、安全、产值与 AI 助手",
+  "lang": "zh-CN",
+  "start_url": "./%E9%80%9A%E7%94%A8%E9%A1%B9%E7%9B%AE%E7%AE%A1%E7%90%86%E5%B7%A5%E4%BD%9C%E5%8F%B0.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
