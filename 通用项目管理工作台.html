@@ -1516,7 +1516,7 @@ function reviewCell(t){
   if(!t.reviewed){
     return src+'<span class="tag warn">待复核</span> <button class="btn sm" style="padding:2px 10px;font-size:.78rem;background:var(--ok);color:#fff;border-radius:4px;cursor:pointer" onclick="event.stopPropagation();markReviewed(\'${t.id}\')" title="点击标记为「已复核」">✓ 已核</button>';
   }
-  return src+'<span class="tag ok">已核</span>';
+  return src+'<span class="tag ok">已核</span> <button class="btn ghost sm" style="padding:2px 6px;font-size:.72rem;color:#888" onclick="event.stopPropagation();unmarkReviewed(\'${t.id}\')" title="取消「已复核」标记，改回待复核">✕ 取消</button>';
 }
 function renderTasksFilter(){render();}
 function filterRows(){}
@@ -2174,6 +2174,13 @@ async function markReviewed(id){
     if(ok) alert('已标记已复核，并回写飞书【工作台账】（关掉扣子的防错闸）✅');
     else alert('本工作台已标记已复核，但回写飞书失败（检查代理/网络）。飞书侧需你手动改复核状态。');
   }
+}
+async function unmarkReviewed(id){
+  const t=data.tasks.find(x=>x.id===id); if(!t)return;
+  if(t.reviewed!==true) return;
+  t.reviewed=false; t.updatedAt=today();
+  save(); render();
+  if(t.source==='feishu') alert('本工作台已取消「已复核」，飞书侧需你手动改复核状态。');
 }
 
 /* ---------- 一键批量复核（AI待复核） ---------- */
