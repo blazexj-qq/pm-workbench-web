@@ -1102,9 +1102,10 @@ function render(){
       '</div>';
     return;
   }
-  // 绑定动态按钮（innerHTML中的onclick在Edge中不可靠，用DOM绑定）
+  // 绑定动态按钮（innerHTML中的onclick在Edge/file://下不可靠，统一用DOM绑定）
   const b=document.getElementById('btnGoSettingsAI');
   if(b) b.addEventListener('click',function(){navigateTo('settings');});
+  // 复核按钮（标记/取消已复核）已统一在 init 内用「事件委托」绑定，此处无需逐个绑定（避免双触发）
 }
 /* ---------- [3c] 全局搜索 ---------- */
 function onGlobalSearch(v){ _search=v.trim(); render(); }
@@ -1514,9 +1515,9 @@ function reviewCell(t){
   const src = t.source==='feishu' ? '<span class="tag" style="background:#e8f0fe;color:#1a73e8">飞书</span> ' : '';
   // 用 !t.reviewed 同时覆盖 false 和 undefined（手动新建的任务 reviewed 不存在）
   if(!t.reviewed){
-    return src+'<span class="tag warn">待复核</span> <button class="btn sm" style="padding:2px 10px;font-size:.78rem;background:var(--ok);color:#fff;border-radius:4px;cursor:pointer" onclick="event.stopPropagation();markReviewed(\'${t.id}\')" title="点击标记为「已复核」">✓ 已核</button>';
+    return src+'<span class="tag warn">待复核</span> <button class="btn sm" data-mark-review="${t.id}" style="padding:2px 10px;font-size:.78rem;background:var(--ok);color:#fff;border-radius:4px;cursor:pointer" title="点击标记为「已复核」">✓ 已核</button>';
   }
-  return src+'<span class="tag ok">已核</span> <button class="btn ghost sm" style="padding:2px 6px;font-size:.72rem;color:#888" onclick="event.stopPropagation();unmarkReviewed(\'${t.id}\')" title="取消「已复核」标记，改回待复核">✕ 取消</button>';
+  return src+'<span class="tag ok">已核</span> <button class="btn ghost sm" data-unmark-review="${t.id}" style="padding:2px 6px;font-size:.72rem;color:#888" title="取消「已复核」标记，改回待复核">✕ 取消</button>';
 }
 function renderTasksFilter(){render();}
 function filterRows(){}
@@ -1857,7 +1858,7 @@ function openTaskModal(id, presetDim){
   if(t&&t.source==='feishu'){
     fh.style.display='block';
     const back = t.reviewed===false
-      ? ` <button class="btn sm" onclick="markReviewed('${t.id}')">✅ 标记已复核并回写飞书</button>`
+      ? ` <button class="btn sm" data-mark-review="${t.id}">✅ 标记已复核并回写飞书</button>`
       : ' <span class="tag ok">已在飞书复核</span>';
     fh.innerHTML=`🔗 本条来自飞书【工作台账】（扣子写入），记录ID：<code>${esc(t.feishuId||'')}</code>${back}`;
   } else {
@@ -2178,8 +2179,8 @@ async function markReviewed(id){
   }
 }
 async function unmarkReviewed(id){
-  const t=data.tasks.find(x=>x.id===id); if(!t)return;
-  // 用 !! 转成严格布尔值再判断，兼容 1/"true"/undefined 等非标准值
+  const t=data.tasks.find(x=>x.id===id);
+  if(!t){ showToast('未找到该任务'); return; }
   if(!!t.reviewed===false){ showToast('该任务当前不是「已复核」状态'); return; }
   t.reviewed=false; t.updatedAt=today();
   save(); render();
@@ -3426,7 +3427,7 @@ function renderKpiDetail(type){
         <td>${t.priority||'—'}</td>
         <td>${t.due||'—'}</td>
         <td>${progBar}</td>
-        ${rowReview?`<td><button class="btn ghost sm" style="padding:2px 8px;font-size:.75rem" onclick="event.stopPropagation();markReviewed('${t.id}')">✓ 复核</button></td>`:''}
+        ${rowReview?`<td><button class="btn ghost sm" style="padding:2px 8px;font-size:.75rem" data-mark-review="${t.id}">✓ 复核</button></td>`:''}
       </tr>`;
     }).join('')||'<tr><td colspan="'+(7+(rowReview?1:0))+'" style="padding:20px;text-align:center">'+(filterLabel?'<div class="muted" style="margin-bottom:8px">🔍 当前筛选条件下无匹配任务</div><button class="btn ghost sm" onclick="filterKpiDetail(\'all\');clearKpiSubFilters()" style="font-size:.8rem">🔄 清除全部筛选（显示全部 '+items.length+' 项）</button>':'<span class="muted">暂无数据</span>')+'</td></tr>'}
   </table>
@@ -4685,6 +4686,16 @@ function renderMilestoneStrip(){
       var sb=document.getElementById('sidebar');
       if(sb&&sb.classList.contains('open'))sb.classList.remove('open');
     }
+  });
+
+  // ── 复核按钮统一用「事件委托」：innerHTML 动态注入的 onclick 在 Edge/file:// 下不可靠，
+  //    改为在 document 上监听一次，按钮用 data-mark-review / data-unmark-review 标记，
+  //    覆盖任务台账、监控视图、弹窗内所有复核按钮，且只绑定一次不会重复触发 ──
+  document.addEventListener('click',function(e){
+    var mb=e.target.closest('[data-mark-review]');
+    if(mb){ e.preventDefault(); e.stopPropagation(); markReviewed(mb.getAttribute('data-mark-review')); return; }
+    var ub=e.target.closest('[data-unmark-review]');
+    if(ub){ e.preventDefault(); e.stopPropagation(); unmarkReviewed(ub.getAttribute('data-unmark-review')); return; }
   });
 
   buildDimNav();
