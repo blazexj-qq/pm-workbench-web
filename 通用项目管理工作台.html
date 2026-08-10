@@ -2165,7 +2165,7 @@ async function feishuReview(recordId){
 }
 async function markReviewed(id){
   const t=data.tasks.find(x=>x.id===id); if(!t)return;
-  if(t.reviewed===true) return;
+  if(!!t.reviewed===true){ showToast('该任务已经是「已复核」状态'); return; }
   t.reviewed=true; t.updatedAt=today();
   let ok=true;
   if(t.source==='feishu'&&t.feishuId){ ok=await feishuReview(t.feishuId); }
@@ -2173,14 +2173,17 @@ async function markReviewed(id){
   if(t.source==='feishu'){
     if(ok) alert('已标记已复核，并回写飞书【工作台账】（关掉扣子的防错闸）✅');
     else alert('本工作台已标记已复核，但回写飞书失败（检查代理/网络）。飞书侧需你手动改复核状态。');
+  } else {
+    showToast('已标记为「已复核」✅');
   }
 }
 async function unmarkReviewed(id){
   const t=data.tasks.find(x=>x.id===id); if(!t)return;
-  if(t.reviewed!==true) return;
+  // 用 !! 转成严格布尔值再判断，兼容 1/"true"/undefined 等非标准值
+  if(!!t.reviewed===false){ showToast('该任务当前不是「已复核」状态'); return; }
   t.reviewed=false; t.updatedAt=today();
   save(); render();
-  if(t.source==='feishu') alert('本工作台已取消「已复核」，飞书侧需你手动改复核状态。');
+  showToast('已取消「已复核」，改回待复核');
 }
 
 /* ---------- 一键批量复核（AI待复核） ---------- */
