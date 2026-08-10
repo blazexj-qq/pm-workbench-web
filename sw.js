@@ -2,7 +2,7 @@
  * 作用：把主程序缓存到本地，使应用断网也能打开，并满足 PWA 安装条件。
  * 注意：只缓存同源的 GET 请求；AI 代理等跨域/POST 请求照常走网络。
  */
-const CACHE = 'pm-workbench-v1';
+const CACHE = 'pm-workbench-v2';
 const ASSETS = [
   './',
   './index.html',
