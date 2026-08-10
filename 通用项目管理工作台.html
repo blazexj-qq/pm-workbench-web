@@ -618,7 +618,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
 <body>
 <!-- 版本横幅（每次改版必更新版本号 + meta[name=app-version]） -->
 <div id="verBanner" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:6px 16px;font-size:.82rem;font-weight:600;position:relative;z-index:9999;cursor:pointer" onclick="this.style.display='none'"   title="点击关闭 · 若版本号低于 v2026-08-03-21:40 说明浏览器缓存了旧版">
-  📦 工作台版本 <b>v2026-08-10 (09:19)</b> · PWA桌面应用支持 + 任务台账行内删除按钮 + 进度监控表头对齐修复 · 点击关闭此条
+  📦 工作台版本 <b>v2026-08-10 (11:08)</b> · 删除/编辑按钮统一事件委托 + 操作列居中对齐 · 点击关闭此条
 </div>
 <div class="layout">
   <div class="mask" id="mask" onclick="closeSide()"></div>
@@ -641,7 +641,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
     <a data-view="automation"><span class="ico">⚙️</span>自动化规则</a>
     <a data-view="recycled"><span class="ico">🗑️</span>回收站</a>
     <a data-view="settings"><span class="ico">🔧</span>设置 / 备份</a>
-    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-10<br>09:19 · 删除按钮+表头对齐+复核双向操作</div>
+    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-10<br>11:08 · 删除/编辑按钮改事件委托+操作列对齐</div>
   </nav>
 
   <main class="main">
@@ -1367,9 +1367,9 @@ function renderMonitor(key){
       <td><input class="inline-input" value="${esc(t.owner||'')}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','owner',this.value)" onclick="event.stopPropagation()" placeholder="责任人" style="width:70px"></td>
       <td><input type="date" class="inline-input" value="${t.due||''}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','due',this.value)" onclick="event.stopPropagation()" style="width:120px"></td>
       <td>${extra}</td>
-      <td class="mon-del" style="width:80px">
-        <button class="btn ghost sm" onclick="event.stopPropagation();openTaskModal('${t.id}')" title="打开完整编辑弹窗" style="padding:2px 6px;font-size:.8rem">✏️</button>
-        <span class="mon-del-btn" onclick="event.stopPropagation();if(confirm('确定删除「'+esc(t.title)+'」？')){deleteTask('${t.id}');render()}" title="删除">🗑️</span>
+      <td class="mon-del" style="width:80px;text-align:center">
+        <button class="btn ghost sm" data-open-task="${t.id}" title="打开完整编辑弹窗" style="padding:2px 6px;font-size:.8rem">✏️</button>
+        <span class="mon-del-btn" data-delete-task="${t.id}" data-delete-title="${esc(t.title)}" title="删除" style="cursor:pointer">🗑️</span>
       </td>
     </tr>`;
   }).join('');
@@ -1483,7 +1483,7 @@ function renderTasks(){
       <td><input class="inline-input" type="text" value="${esc(t.owner||'')}" placeholder="—" onblur="event.stopPropagation();if(this.value!==(data.tasks.find(x=>x.id==='${t.id}')||{}).owner){inlineUpdateField('${t.id}','owner',this.value)}" onkeydown="event.stopPropagation()"></td>
       <td><input class="inline-input" type="date" value="${t.due||''}" onblur="event.stopPropagation();if(this.value!==(data.tasks.find(x=>x.id==='${t.id}')||{}).due){inlineUpdateField('${t.id}','due',this.value)}" onkeydown="event.stopPropagation()"></td>
       <td>${reviewCell(t)}</td>
-      <td style="text-align:center;white-space:nowrap"><button class="btn ghost sm" onclick="event.stopPropagation();openTaskModal('${t.id}')" title="完整编辑（全部字段）" style="padding:2px 8px;font-size:.82rem">✏️</button> <button class="btn ghost sm" onclick="event.stopPropagation();if(confirm('确定删除「'+esc(t.title)+'」？')){deleteTask('${t.id}');render()}" title="删除此任务（可从回收站恢复）" style="padding:2px 6px;font-size:.82rem;color:#c62828">🗑️</button></td>
+      <td style="text-align:center;white-space:nowrap"><button class="btn ghost sm" data-open-task="${t.id}" title="完整编辑（全部字段）" style="padding:2px 8px;font-size:.82rem">✏️</button> <span class="mon-del-btn" data-delete-task="${t.id}" data-delete-title="${esc(t.title)}" title="删除此任务（可从回收站恢复）" style="cursor:pointer;padding:2px 6px;font-size:.82rem;color:#c62828">🗑️</span></td>
     </tr>`;
   }).join('');
   const projFilter=`<select style="width:auto" onchange="curFilter=this.value;renderTasksFilter(this.value)"><option>全部项目</option>${data.projects.map(p=>`<option ${curFilter===p.name?'selected':''}>${esc(p.name)}</option>`).join('')}</select>`;
@@ -4689,14 +4689,21 @@ function renderMilestoneStrip(){
     }
   });
 
-  // ── 复核按钮统一用「事件委托」：innerHTML 动态注入的 onclick 在 Edge/file:// 下不可靠，
-  //    改为在 document 上监听一次，按钮用 data-mark-review / data-unmark-review 标记，
-  //    覆盖任务台账、监控视图、弹窗内所有复核按钮，且只绑定一次不会重复触发 ──
+  // ── 统一用「事件委托」：innerHTML 动态注入的 onclick 在 Edge/file:// 下不可靠，
+  //    改为在 document 上监听一次，按钮用 data-* 标记，
+  //    覆盖任务台账、监控视图、弹窗内所有动态按钮，且只绑定一次不会重复触发 ──
   document.addEventListener('click',function(e){
     var mb=e.target.closest('[data-mark-review]');
     if(mb){ e.preventDefault(); e.stopPropagation(); markReviewed(mb.getAttribute('data-mark-review')); return; }
     var ub=e.target.closest('[data-unmark-review]');
     if(ub){ e.preventDefault(); e.stopPropagation(); unmarkReviewed(ub.getAttribute('data-unmark-review')); return; }
+    // 进度监控明细行：编辑/删除按钮
+    var ot=e.target.closest('[data-open-task]');
+    if(ot){ e.preventDefault(); e.stopPropagation(); openTaskModal(ot.getAttribute('data-open-task')); return; }
+    var dt=e.target.closest('[data-delete-task]');
+    if(dt){ e.preventDefault(); e.stopPropagation();
+      var did=dt.getAttribute('data-delete-task'), dtitle=dt.getAttribute('data-delete-title')||'该任务';
+      if(confirm('确定删除「'+dtitle+'」？')){ deleteTask(did); render(); } return; }
   });
 
   buildDimNav();
