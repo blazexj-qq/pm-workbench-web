@@ -618,7 +618,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
 <body>
 <!-- 版本横幅（每次改版必更新版本号 + meta[name=app-version]） -->
 <div id="verBanner" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:6px 16px;font-size:.82rem;font-weight:600;position:relative;z-index:9999;cursor:pointer" onclick="this.style.display='none'"   title="点击关闭 · 若版本号低于 v2026-08-03-21:40 说明浏览器缓存了旧版">
-  📦 工作台版本 <b>v2026-08-10 (11:08)</b> · 删除/编辑按钮统一事件委托 + 操作列居中对齐 · 点击关闭此条
+  📦 工作台版本 <b>v2026-08-10 (11:45)</b> · 修复进度监控空数据(残留筛选) + 归档按钮文案优化 · 点击关闭此条
 </div>
 <div class="layout">
   <div class="mask" id="mask" onclick="closeSide()"></div>
@@ -641,7 +641,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
     <a data-view="automation"><span class="ico">⚙️</span>自动化规则</a>
     <a data-view="recycled"><span class="ico">🗑️</span>回收站</a>
     <a data-view="settings"><span class="ico">🔧</span>设置 / 备份</a>
-    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-10<br>11:08 · 删除/编辑按钮改事件委托+操作列对齐</div>
+    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-10<br>11:45 · 修复进度监控空数据(残留筛选) + 归档按钮文案优化</div>
   </nav>
 
   <main class="main">
@@ -1298,6 +1298,12 @@ function renderMonitor(key){
   const _projList = activeProjects();
   const _curPF = data._monitorProjFilter || '全部';
   const _pOpts = '<option value="全部">全部项目</option>' + _projList.map(p => `<option value="${p.id}" ${_curPF===p.id?'selected':''}>${esc(p.name)}</option>`).join('');
+  // 🔧 自动清理：切换维度时，若残留的状态筛选对当前维度无效则自动清除
+  //    例：从"风险(红/黄/绿)"切到"进度(未开始/进行中/滞后)"，"黄"筛选应清掉
+  if(_monitorStatusFilter){
+    var _validOpts = d.type==='level' ? ['红','黄','绿'] : (d.statusOpts||[]);
+    if(_validOpts.indexOf(_monitorStatusFilter)<0){ _monitorStatusFilter=''; }
+  }
   let filteredTs = _curPF === '全部' ? ts : ts.filter(t => t.projectId === _curPF);
   // 状态/等级标签点击筛选（风险维度按level，其他按status）
   if(_monitorStatusFilter){
@@ -3353,7 +3359,7 @@ function renderKpiDetail(type){
           <div><b style="font-size:1.05rem">${esc(p.name)}</b>${p.archived?' <span class="tag gray">已归档</span>':''}</div>
           <div style="display:flex;align-items:center;gap:8px">
             <div style="text-align:right;font-size:.85rem;color:var(--sub)">${ts.length}项任务${lagTs.length?' · <span style="color:var(--bad)">'+lagTs.length+'滞后</span>':''}${avgProg?' · 进度'+avgProg+'%':''}</div>
-            ${!p.archived?`<button class="btn ghost sm" onclick="event.stopPropagation();archiveProject('${p.id}','${esc(p.name)}')" title="归档该项目（任务移入回收站）" style="flex-shrink:0;font-size:.78rem;padding:3px 8px">📦 归档</button>`:`<button class="btn ghost sm" onclick="event.stopPropagation();unarchiveProject('${p.id}')" title="恢复已归档项目" style="flex-shrink:0;font-size:.78rem;padding:3px 8px">📤 恢复</button>`}
+            ${!p.archived?`<button class="btn ghost sm" onclick="event.stopPropagation();archiveProject('${p.id}','${esc(p.name)}')" title="归档该项目（任务移入回收站）" style="flex-shrink:0;font-size:.78rem;padding:3px 8px;border:1px dashed var(--line)">归档</button>`:`<button class="btn ghost sm" onclick="event.stopPropagation();unarchiveProject('${p.id}')" title="恢复已归档项目" style="flex-shrink:0;font-size:.78rem;padding:3px 8px;color:var(--ok);border:1px solid var(--ok))">恢复</button>`}
           </div>
         </div>
         ${avgProg?`<div class="bar" style="margin-top:6px"><i style="width:${avgProg}%"></i></div>`:''}
