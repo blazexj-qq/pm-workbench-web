@@ -622,7 +622,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
 <body>
 <!-- 版本横幅（每次改版必更新版本号 + meta[name=app-version]） -->
 <div id="verBanner" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:6px 16px;font-size:.82rem;font-weight:600;position:relative;z-index:9999;cursor:pointer" onclick="this.style.display='none'"   title="点击关闭 · 若版本号低于 v2026-08-03-21:40 说明浏览器缓存了旧版">
-  📦 工作台版本 <b>v2026-08-11 (10:30)</b> · 新建任务项目匹配修复 + 弹窗布局紧凑化 · 点击关闭此条
+  📦 工作台版本 <b>v2026-08-11 (10:35)</b> · 项目下拉选择修复(事件委托) + 弹窗布局紧凑化 · 点击关闭此条
 </div>
 <div class="layout">
   <div class="mask" id="mask" onclick="closeSide()"></div>
@@ -645,7 +645,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
     <a data-view="automation"><span class="ico">⚙️</span>自动化规则</a>
     <a data-view="recycled"><span class="ico">🗑️</span>回收站</a>
     <a data-view="settings"><span class="ico">🔧</span>设置 / 备份</a>
-    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>10:30 · 新建任务项目模糊匹配 + 弹窗布局紧凑化</div>
+    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>10:35 · 项目下拉选择修复(改事件委托) + 弹窗布局紧凑化</div>
   </nav>
 
   <main class="main">
@@ -1975,9 +1975,9 @@ function renderProjDrop(filter){
   const q=(filter||'').toLowerCase();
   const items=data.projects.filter(p=>p.name.toLowerCase().includes(q));
   if(!items.length){ drop.innerHTML='<div class="muted" style="padding:10px 12px;font-size:.85rem">无匹配项目，可直接输入新名字创建</div>'; return; }
-  drop.innerHTML=items.map(p=>`<div class="proj-item" data-id="${p.id}" data-name="${esc(p.name)}" onclick="pickProj(this)">
+  drop.innerHTML=items.map(p=>`<div class="proj-item" data-pick-proj="${p.id}" data-name="${esc(p.name)}">
     <span class="pname">${esc(p.name)}</span>
-    <button class="pdel" onclick="event.stopPropagation();delProj('${p.id}','${esc(p.name)}')" title="删除此项目">×</button>
+    <button class="pdel" data-del-proj="${p.id}" data-del-proj-name="${esc(p.name)}" title="删除此项目">×</button>
   </div>`).join('');
 }
 function filterProjDrop(q){ renderProjDrop(q); document.getElementById('projDrop').classList.add('show'); }
@@ -4839,6 +4839,15 @@ function renderMilestoneStrip(){
       var tid=ta.getAttribute('data-todo-archive');
       toggleTodoArchivePicker(tid); return;
     }
+    // 新建任务弹窗：项目下拉选择
+    var pp=e.target.closest('[data-pick-proj]');
+    if(pp){ e.preventDefault(); e.stopPropagation();
+      document.getElementById('f-project').value=pp.getAttribute('data-name');
+      hideProjDrop(); return; }
+    // 新建任务弹窗：项目下拉内删除按钮
+    var dp=e.target.closest('[data-del-proj]');
+    if(dp){ e.preventDefault(); e.stopPropagation();
+      delProj(dp.getAttribute('data-del-proj'),dp.getAttribute('data-del-proj-name')); return; }
   });
   // 回收站：checkbox 变化时同步按钮状态
   document.addEventListener('change',function(e){
