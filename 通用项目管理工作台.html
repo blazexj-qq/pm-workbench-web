@@ -7,14 +7,14 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <!-- 版本号：每次修改必须更新此行，JS 会用它检测缓存 -->
-<meta name="app-version" content="v2026-08-11-15-40">
+<meta name="app-version" content="v2026-08-11-15-50">
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#4f46e5">
 <script>
 // ── 缓存破坏层 1：bfcache（往返缓存）检测 ──
 // Edge 关闭浏览器后重开会从内存恢复旧页面，不重新加载文件
 (function(){
-  var EXPECTED='v2026-08-11-15-40';
+  var EXPECTED='v2026-08-11-15-50';
   var meta=document.querySelector('meta[name=app-version]');
   var ACTUAL=meta?meta.getAttribute('content'):'';
   // 检测 bfcache 恢复
@@ -622,7 +622,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
 <body>
 <!-- 版本横幅（每次改版必更新版本号 + meta[name=app-version]） -->
 <div id="verBanner" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:6px 16px;font-size:.82rem;font-weight:600;position:relative;z-index:9999;cursor:pointer" onclick="this.style.display='none'"   title="点击关闭 · 若版本号低于 v2026-08-03-21:40 说明浏览器缓存了旧版">
-  📦 工作台版本 <b>v2026-08-11 (15:40)</b> · AI拆解按钮改直接绑定+三重保险 · 点击关闭此条
+  📦 工作台版本 <b>v2026-08-11 (15:50)</b> · AI拆解导入彻底重写(全局函数+cloneNode防重复+点击即时反馈) · 点击关闭此条
 </div>
 <div class="layout">
   <div class="mask" id="mask" onclick="closeSide()"></div>
@@ -645,7 +645,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
     <a data-view="automation"><span class="ico">⚙️</span>自动化规则</a>
     <a data-view="recycled"><span class="ico">🗑️</span>回收站</a>
     <a data-view="settings"><span class="ico">🔧</span>设置 / 备份</a>
-    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>15:40 · AI拆解按钮改直接绑定+三重保险</div>
+    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>15:50 · AI拆解导入彻底重写(全局函数+cloneNode防重复+点击即时反馈)</div>
   </nav>
 
   <main class="main">
@@ -1786,16 +1786,13 @@ function impParse(){
     ${_impTasks.slice(0,50).map(t=>`<tr><td>${esc(projName(t.projectId))}</td><td>${DIM[t.dimension]?DIM[t.dimension].label:'-'}</td><td>${esc(t.title)}</td><td>${esc(t.status)}</td><td>${esc(t.owner)}</td></tr>`).join('')}
     </tbody></table>${_impTasks.length>50?'<div class="muted">…仅显示前 50 条</div>':''}</div>`;
   document.getElementById('impPreview').innerHTML=prev;
-  // 不调 showGen（会覆盖 impPreview），手动用 showGen 同款 addEventListener + el.onclick 双保险
-  const _acts=[
+  // 用 showGen 统一渲染按钮（复用其 cloneNode+getElementById+addEventListener 方案）
+  showGen('📥 批量导入任务', prev, [
     {t:'取消',cls:'btn ghost', fn:()=>closeModal('genModal')},
     {t:'✅ 确认导入 '+_impTasks.length+' 条',cls:'btn',fn:()=>impConfirm()}
-  ];
-  const _actEl=document.getElementById('genModalActs');
-  _actEl.innerHTML=_acts.map((a,i)=>`<button class="${a.cls}" data-gen-act="${i}">${a.t}</button>`).join('');
-  _actEl.querySelectorAll('[data-gen-act]').forEach((btn,i)=>{
-    btn.addEventListener('click',function(){ if(_acts[i]&&_acts[i].fn) _acts[i].fn(); });
-  });
+  ]);
+  // showGen 会覆盖 impPreview（因为 genModalBody 被重写），所以重新写入
+  document.getElementById('genModalBody').innerHTML='<div id="impPreview">'+prev+'</div>';
 }
 function impConfirm(){
   if(!_impTasks.length) return;
@@ -2323,8 +2320,12 @@ async function aiAssign(){
     const sys='你是工程项目管理助手。把用户给的文字拆成任务清单，仅输出JSON数组，每条:{projectHint(项目名称关键词),dimension(从[进度,质量,安全·环保,产值·成本,物资设备,风险,劳务·人力,合同·分包,图纸·资料,变更·签证,巡检·巡查]选一),title,owner,due(YYYY-MM-DD或空),priority(高/中/低),notes}。不要解释。';
     const c=await aiChat([{role:'system',content:sys},{role:'user',content:text}],{temp:0.2, signal});
     let arr=[]; try{ arr=JSON.parse((c.match(/\[[\s\S]*\]/)||[c])[0]); }catch(e){ throw new Error('AI返回无法解析为JSON'); }
-    // 预览 + 人工确认导入
-    showGen('AI 拆解结果（请核对后导入）', previewTasks(arr), [{t:'✅ 确认导入',cls:'btn',fn:()=>{importTasks(arr);closeModal('genModal');}},{t:'取消',cls:'btn ghost',fn:()=>closeModal('genModal')}]);
+    // 预览 + 人工确认导入（用全局变量+全局函数，避免闭包作用域问题）
+    _pendingImportArr=arr;
+    showGen('AI 拆解结果（请核对后导入）', previewTasks(arr), [
+      {t:'✅ 确认导入 '+arr.length+' 条',cls:'btn',fn:confirmAiImport},
+      {t:'取消',cls:'btn ghost',fn:()=>closeModal('genModal')}
+    ]);
   },'拆解中…');
 }
 function previewTasks(arr){
@@ -4134,18 +4135,39 @@ function automationHits(){
 /* ---------- 通用工具 ---------- */
 function showModal(id){document.getElementById(id).classList.add('show');}
 function closeModal(id){document.getElementById(id).classList.remove('show');}
-let _genActs=[]; // showGen 弹窗按钮回调（直接 addEventListener 绑定，最可靠）
+let _genActs=[]; // showGen 弹窗按钮回调
+let _pendingImportArr=null; // AI拆解待导入任务数组（全局变量，避免闭包作用域问题）
 function showGen(title,body,acts){
   document.getElementById('genModalT').textContent=title;
   document.getElementById('genModalBody').innerHTML=body;
   _genActs=acts||[];
   const actEl=document.getElementById('genModalActs');
-  actEl.innerHTML = _genActs.map((a,i)=>`<button class="${a.cls||'btn ghost'}" data-gen-act="${i}">${a.t}</button>`).join('');
-  // 直接给每个按钮 addEventListener（最可靠的 JS 绑定方式；不走事件委托，避免在 Edge/file:// 弹窗里偶尔无响应）
-  actEl.querySelectorAll('[data-gen-act]').forEach((btn,i)=>{
-    btn.addEventListener('click',function(){ if(_genActs[i]&&_genActs[i].fn) _genActs[i].fn(); });
+  // 用 cloneNode 彻底清除旧按钮+旧监听器（防止内存泄漏和重复触发）
+  const newActEl=actEl.cloneNode(false); // false=浅克隆（不复制子节点）
+  actEl.parentNode.replaceChild(newActEl,actEl);
+  // 重新获取引用（因为 replaceChild 后原引用失效）
+  const finalEl=document.getElementById('genModalActs');
+  finalEl.innerHTML = _genActs.map((a,i)=>`<button id="_gb${i}" class="${a.cls||'btn ghost'}">${a.t}</button>`).join('');
+  // 方案：直接用 getElementById + onclick 赋值（静态HTML中的按钮，非innerHTML动态注入）
+  // 这是 JS 里最原始、兼容性最好的绑定方式
+  _genActs.forEach((a,i)=>{
+    var b=document.getElementById('_gb'+i);
+    if(!b)return;
+    // 即时视觉反馈：点击后立刻变文字，让用户知道"按到了"
+    b.addEventListener('click',function(){
+      this.textContent='⏳ 处理中…';this.disabled=true;
+      try{ if(a.fn)a.fn(); }catch(e){ alert('导入出错：'+e.message);this.textContent=a.t;this.disabled=false; }
+    });
   });
   showModal('genModal');
+}
+// AI拆解确认导入：全局函数（不走闭包），读全局 _pendingImportArr
+function confirmAiImport(){
+  if(!_pendingImportArr||!_pendingImportArr.length){ toast('⚠️ 没有可导入的任务'); return; }
+  var arr=_pendingImportArr;
+  _pendingImportArr=null; // 防重复导入
+  importTasks(arr);
+  closeModal('genModal');
 }
 function reportIdx(id){ return (data.reports||[]).findIndex(x=>x.id===id); }
 function copyReport(id){ const i=reportIdx(id); const x=(data.reports||[])[i]; if(x) copyText(x.content); }
