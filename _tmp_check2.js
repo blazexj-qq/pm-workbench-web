@@ -1,773 +1,3 @@
-<!doctype html>
-<html lang="zh">
-<head>
-<meta charset="utf-8">
-<!-- ⚠️ Edge 缓存防御：以下 meta 对 file:// 协议效果有限，见下方 JS 层防御 -->
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
-<!-- 版本号：每次修改必须更新此行，JS 会用它检测缓存 -->
-<meta name="app-version" content="v2026-08-11-15-50">
-<link rel="manifest" href="./manifest.webmanifest">
-<meta name="theme-color" content="#4f46e5">
-<script>
-// ── 缓存破坏层 1：bfcache（往返缓存）检测 ──
-// Edge 关闭浏览器后重开会从内存恢复旧页面，不重新加载文件
-(function(){
-  var EXPECTED='v2026-08-11-15-50';
-  var meta=document.querySelector('meta[name=app-version]');
-  var ACTUAL=meta?meta.getAttribute('content'):'';
-  // 检测 bfcache 恢复
-  window.addEventListener('pageshow',function(e){
-    if(e.persisted){
-      // 从 bfcache 恢复 → 强制整页重载
-      window.location.reload();
-      return;
-    }
-    // 版本不匹配 → 可能是缓存了旧版
-    if(ACTUAL&&ACTUAL!==EXPECTED){
-      document.body.innerHTML='<div style="padding:40px;font-family:system-ui;text-align:center;background:#fff5d6;color:#996600">'+
-        '<h2>🔄 检测到旧版本</h2><p>当前版本：<b>'+ACTUAL+'</b>，期望版本：<b>'+EXPECTED+'</b></p>'+
-        '<p>Edge 浏览器可能缓存了旧版文件。</p>'+
-        '<button onclick="location.reload(true)" style="padding:10px 24px;font-size:1rem;cursor:pointer;margin-top:12px">点击强制刷新</button>'+
-        '</div';
-      return;
-    }
-  });
-  // 立即检查 DOM 中是否有新版标记
-  if(ACTUAL&&ACTUAL!==EXPECTED){
-    // 延迟到 body 存在后再显示警告
-    document.addEventListener('DOMContentLoaded',function(){
-      var bar=document.createElement('div');
-      bar.id='_edgeCacheFix';
-      bar.style.cssText='position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:14px 20px;font-size:.95rem;z-index:999999;display:flex;gap:16px;align-items:center;box-shadow:0 4px 16px rgba(0,0,0,.3);font-family:system-ui,sans-serif';
-      bar.innerHTML='<b>⚠️ 浏览器可能加载了旧版本</b><span style="opacity:.9">期望 '+EXPECTED+'，实际 '+ACTUAL+'</span>'+
-        '<button id="_efReload" style="background:#fff;color:#667eea;border:0;border-radius:6px;padding:6px 16px;cursor:pointer;font-weight:700">🔄 强制刷新</button>'+
-        '<button id="_efDismiss" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:6px;padding:6px 12px;cursor:pointer;margin-left:auto">忽略</button>';
-      document.body.prepend(bar);
-      document.getElementById('_efReload').onclick=function(){location.reload(true);};
-      document.getElementById('_efDismiss').onclick=function(){bar.remove();};
-      // 8秒后自动消失
-      setTimeout(function(){if(bar.parentNode)bar.remove();},8000);
-    });
-  }
-})();
-</script>
-<!-- 恢复双指缩放（错题管家经验：maximum-scale=1 会让人误以为字小） -->
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>通用项目管理工作台</title>
-<style>
-:root{ --scale:1; --bg:#0d1117; --side:#161b22; --card:#ffffff; --ink:#1f2328; --sub:#57606a; --line:#d0d7de; --accent:#2f81f7; --ok:#2da44e; --warn:#d29922; --bad:#cf222e; --soft:#f6f8fa; }
-html{ font-size:calc(17px*var(--scale)); width:100%;overflow-x:auto; }
-*{box-sizing:border-box}
-body{margin:0;width:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",system-ui;background:var(--soft);color:var(--ink);font-size:1rem;line-height:1.55}
-/* ===== 布局：GitHub 风格深色侧栏 + 内容区 ===== */
-.layout{width:100%;min-height:100vh}
-.side{width:230px;min-width:230px;background:var(--side);color:#c9d1d9;height:100vh;overflow-y:auto;position:fixed;left:0;top:0;z-index:10}
-.side h1{font-size:1.1rem;padding:16px 16px 8px;margin:0;color:#fff;font-weight:700}
-.side .grp{font-size:.76rem;color:#8b949e;padding:14px 16px 4px;letter-spacing:.05em}
-.side a{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#c9d1d9;text-decoration:none;cursor:pointer;font-size:.96rem;border-left:3px solid transparent}
-.side a:hover{background:#21262d}
-.side a.active{background:#21262d;border-left-color:var(--accent);color:#fff}
-.side a[draggable="true"]{cursor:grab}
-.side a[draggable="true"]:active{cursor:grabbing}
-.side a.dragging{opacity:.4}
-.side a.dragover{background:var(--accent);color:#fff;border-left-color:#fff}
-.side a .lbl{flex:1}
-.side a .drag{margin-left:auto;opacity:.35;font-size:.8rem;letter-spacing:-2px}
-.side .ico{width:20px;text-align:center}
-.main{margin-left:230px;padding:20px 24px 60px;overflow:auto;display:block}
-.topbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
-.topbar .ttl{font-size:1.5rem;font-weight:700;margin-right:auto}
-.chips{display:flex;gap:6px;flex-wrap:wrap}
-.chip{background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:.88rem;cursor:pointer;color:var(--sub)}
-.chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-.btn{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:9px 16px;font-size:.95rem;cursor:pointer}
-.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
-.btn.sm{padding:6px 12px;font-size:.86rem}
-.btn.danger{background:var(--bad)}
-input,select,textarea{font-family:inherit;font-size:.96rem;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);width:100%}
-label.fld{display:block;font-size:.82rem;color:var(--sub);margin:4px 0 1px}
-/* ===== 驾驶舱：工程管理风格 ===== */
-.db-top{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;margin-bottom:14px}
-.db-stat{flex:1;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:box-shadow .15s;border-left:4px solid transparent}
-.db-stat:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
-.db-stat .sn{font-size:1.7rem;font-weight:800;line-height:1;white-space:nowrap}
-.db-stat .sd{font-size:.78rem;color:var(--sub);line-height:1.2}
-.db-stat.s-total{border-left-color:var(--accent)}
-.db-stat.s-bad{border-left-color:var(--bad)}
-.db-stat.s-warn{border-left-color:var(--warn)}
-.db-stat.s-red{border-left-color:#d93025}
-.db-stat.s-ok{border-left-color:var(--ok)}
-.db-stat.s-info{border-left-color:#0969da}
-
-/* 项目看板卡片 */
-.db-projects{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:14px}
-.proj-card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;cursor:pointer;transition:box-shadow .15s;border-top:3px solid var(--accent)}
-.proj-card:hover{box-shadow:0 3px 12px rgba(0,0,0,.08)}
-.proj-card .pc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.proj-card .pc-name{font-weight:700;font-size:.98rem}
-.proj-card .pc-pct{font-size:1.2rem;font-weight:800;color:var(--accent)}
-.proj-card .pc-bar{height:8px;background:#eaeef2;border-radius:4px;overflow:hidden;margin-bottom:8px}
-.proj-card .pc-bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#66b3ff);border-radius:4px}
-.proj-card .pc-tags{display:flex;gap:6px;flex-wrap:wrap}
-.proj-card .pc-tags .tag{font-size:.72rem;padding:2px 8px}
-
-/* 维度迷你网格 */
-.db-dims{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
-.dim-chip{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--card);border:1px solid var(--line);border-radius:8px;font-size:.85rem;cursor:pointer;transition:border-color .15s}
-.dim-chip:hover{border-color:var(--accent)}
-.dim-chip .dc-n{font-weight:700;font-size:1.1rem;color:var(--ink)}
-.dim-chip .dc-l{color:var(--sub);font-size:.78rem;line-height:1.2}
-
-/* 提醒紧凑列表 */
-.rem-list{display:flex;flex-direction:column;gap:6px}
-.rem-item{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:8px;font-size:.88rem;transition:background .1s;cursor:pointer}
-.rem-item:hover{background:var(--soft)}
-.rem-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.rem-dot.dbad{background:var(--bad)} .rem-dot.dwarn{background:var(--warn)} .rem-dot.dok{background:var(--ok)}
-
-/* ===== 工作笔记 ===== */
-.note-date-picker{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
-.note-date-picker input[type="date"]{padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:.95rem;background:#fff;cursor:pointer}
-.note-editor{margin-bottom:16px}
-.note-editor textarea{width:100%;min-height:140px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;font-size:.95rem;line-height:1.65;resize:vertical;font-family:inherit;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-.note-editor textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(66,133,244,.12)}
-.note-actions{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
-/* 语音输入按钮 */
-.voice-btn{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:0;border-radius:8px;padding:8px 16px;font-size:.9rem;cursor:pointer;transition:all .2s;font-family:inherit;flex-shrink:0}
-.voice-btn:hover{box-shadow:0 3px 10px rgba(102,126,234,.35);transform:translateY(-1px)}
-.voice-btn.recording{background:linear-gradient(135deg,#cf222e,#a31515);animation:pulse-voice 1.2s ease-in-out infinite}
-/* 通用按钮录音态（随手记语音等） */
-.btn.recording{background:linear-gradient(135deg,#cf222e,#a31515)!important;color:#fff!important;animation:pulse-voice 1.2s ease-in-out infinite;border-color:#a31515!important}
-@keyframes pulse-voice{0%,100%{box-shadow:0 0 0 0 rgba(207,34,46,.4)}50%{box-shadow:0 0 0 10px rgba(207,34,46,0)}}
-.voice-hint{font-size:.78rem;color:var(--sub);margin-top:4px;display:flex;align-items:center;gap:4px}
-.voice-hint .ok{color:var(--ok)}
-.voice-hint .no{color:var(--bad)}
-/* 右侧滑出编辑面板 */
-.slide-panel-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.3);z-index:999}
-.slide-panel{position:fixed;top:0;right:0;bottom:0;width:460px;max-width:92vw;background:#fff;z-index:1000;box-shadow:-4px 0 24px rgba(0,0,0,.15);transform:translateX(100%);transition:transform .25s ease;overflow-y:auto;padding:24px 22px 40px}
-.ai-gen-section{background:linear-gradient(135deg,#f0f7ff,#fff);border:1px solid #c9e2ff;border-radius:12px;padding:16px 18px;margin-bottom:18px}
-.ai-summary{font-size:.93rem;line-height:1.65;color:#333;padding:12px 14px;background:#fff;border-radius:8px;margin:10px 0;white-space:pre-wrap}
-.todo-list{display:flex;flex-direction:column;gap:8px}
-.todo-card{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;background:#fff;border:1px solid var(--line);border-radius:10px;transition:box-shadow .15s}
-.todo-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.06)}
-.todo-card.done-card{opacity:.55;background:#f8fafc;border-color:#e2e8f0}
-.todo-card.done-card .todo-text{text-decoration:line-through;color:#94a3b8}
-.todo-check{width:20px;height:20px;border-radius:5px;border:2px solid #cbd5e1;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:2px;transition:all .15s}
-.todo-check.checked{background:var(--ok);border-color:var(--ok);color:#fff}
-.todo-body{flex:1;min-width:0;overflow:hidden}
-.todo-text{font-size:.92rem;line-height:1.5;word-break:break-word;overflow-wrap:break-word}
-.todo-meta{display:flex;gap:8px;margin-top:4px;align-items:center;flex-wrap:wrap}
-.todo-status-tag{font-size:.75rem;padding:2px 8px;border-radius:10px;font-weight:500}
-.todo-status-tag.pending{background:#fef3c7;color:#92400e}
-.todo-status-tag.done{background:#d1fae5;color:#065f46}
-.todo-status-tag.delayed{background:#fee2e2;color:#991b1b}
-.todo-delay-input{font-size:.8rem;padding:3px 8px;border:1px solid var(--line);border-radius:6px;width:160px;color:var(--sub)}
-.todo-del{color:#ccc;cursor:pointer;font-size:.85rem;padding:2px 6px;border-radius:4px;transition:all .15s}
-.todo-del:hover{color:var(--bad);background:#fef2f2}
-.todo-move{display:inline-flex;flex-direction:column;gap:0;margin-left:2px}
-.todo-mv{width:20px;height:15px;line-height:13px;text-align:center;font-size:.6rem;color:#64748b;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;cursor:pointer;padding:0;transition:all .15s}
-.todo-mv:hover:not(:disabled){background:#e2e8f0;color:var(--accent)}
-.todo-archive-btn{color:var(--accent);cursor:pointer;font-size:.82rem;padding:2px 8px;border-radius:4px;transition:all .15s;font-weight:600;white-space:nowrap}
-.todo-archive-btn:hover{background:#e8f0fe;color:#1a56db}
-.todo-card.archived-card{border-left:4px solid #8b5cf6;background:#faf5ff}
-.todo-card.archived-card .todo-text{color:#6b21a8;font-weight:500}
-.todo-mv:disabled{opacity:.3;cursor:not-allowed}
-.todo-status-sel{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2364748b'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center;background-size:10px;padding-right:22px;min-width:100px;max-width:130px;white-space:nowrap}
-.notes-archive-toggle{font-size:.82rem;color:var(--accent);cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin:8px 0}
-.notes-archive-toggle:hover{text-decoration:underline}
-.notes-empty{text-align:center;padding:40px 20px;color:var(--sub)}
-.notes-empty .ico{font-size:2.5rem;margin-bottom:10px}
-
-/* 驾驶舱布局 */
-.db-layout{display:grid;grid-template-columns:1fr 340px;gap:14px}
-@media(max-width:1000px){.db-layout{grid-template-columns:1fr}}
-.db-note{background:linear-gradient(135deg,#f8f9ff,#eef2ff);border:1px solid #c9d4ff;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#3a4a8a;margin-bottom:14px;display:flex;gap:8px;align-items:flex-start}
-.db-note .db-note-icon{flex-shrink:0;font-size:1rem}
-/* 今日简报（主动秘书） */
-.brief-card{background:linear-gradient(135deg,#fff8e6,#fffdf5);border:1px solid #ffe1a8}
-.brief-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
-.brief-hello{font-size:1.15rem;font-weight:700;margin-right:10px}
-.brief-sub{font-size:.82rem;color:#8a6d3b;background:#fff3d6;border:1px solid #ffd591;border-radius:20px;padding:2px 12px}
-.brief-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.brief-cols h4{margin:0 0 8px;font-size:.92rem;color:#5c4a23}
-.brief-ul{list-style:none;margin:0;padding:0;font-size:.86rem;line-height:1.6}
-.brief-ul li{margin-bottom:5px}
-@media(max-width:760px){ .brief-cols{grid-template-columns:1fr} }
-/* 进度条 */
-.bar{height:18px;background:#eaeef2;border-radius:9px;overflow:hidden}
-.bar>i{display:block;height:100%;background:var(--accent)}
-/* 面板卡片 */
-.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 1px 2px rgba(0,0,0,.04);overflow-wrap:break-word;word-break:break-word}
-.panel h3{margin:0 0 14px;font-size:1.15rem}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media(max-width:900px){.grid2{grid-template-columns:1fr}}
-/* 表格 */
-table{width:100%;border-collapse:collapse;font-size:.92rem}
-th,td{text-align:left;padding:10px 12px;border-bottom:1px solid #eee;vertical-align:top}
-th{color:var(--sub);font-weight:600;background:var(--soft)}
-.tag{display:inline-block;padding:3px 10px;border-radius:6px;font-size:.8rem;background:#eef2f6;color:#334}
-.tag.bad{background:#ffebe9;color:var(--bad)} .tag.warn{background:#fff8c5;color:#7d4e00}
-.tag.ok{background:#dafbe1;color:var(--ok)} .tag.gray{background:#eaeef2;color:#555}
-.tag.info{background:#ddf4ff;color:#0969da}
-/* 监控汇总区小标签 */
-.mon-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75rem;cursor:pointer;border:1px solid transparent;transition:all .15s}
-.mon-tag:hover{transform:scale(1.05);box-shadow:0 1px 4px rgba(0,0,0,.12)}
-.mon-del{text-align:center;white-space:nowrap;width:80px}
-.mon-del-btn{display:inline-block;width:auto;height:20px;line-height:18px;text-align:center;border-radius:4px;color:#c62828;font-size:.82rem;cursor:pointer;opacity:1;transition:all .15s;padding:0 4px}
-tr.row-link:hover .mon-del-btn{opacity:1}
-.mon-del-btn:hover{background:#fee;color:#c62828;font-weight:700}
-.row-link{cursor:pointer} .row-link:hover{background:#f6f8fa}
-/* 行内编辑控件（任务台账表格单元格） */
-.inline-sel{appearance:none;-webkit-appearance:none;border:1px solid #d0d7de;border-radius:6px;padding:4px 8px;font-size:.82rem;background:#fff;cursor:pointer;transition:border-color .15s;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.inline-sel:hover,.inline-sel:focus{border-color:#2f81f7;outline:none;box-shadow:0 0 0 2px rgba(47,129,247,.12)}
-.inline-input{border:1px solid #d0d7de;border-radius:6px;padding:4px 8px;font-size:.82rem;width:100%;min-width:70px;max-width:120px;transition:border-color .15s;background:#fff}
-.inline-input:hover,.inline-input:focus{border-color:#2f81f7;outline:none;box-shadow:0 0 0 2px rgba(47,129,247,.12)}
-/* 任务台账行悬停 */
-#main table tr:hover{background:#f6f8fa}
-/* 提醒列表 */
-.rem{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px;background:#fff}
-.rem .dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:0 0 auto}
-.rem .dot.bad{background:var(--bad)} .rem .dot.warn{background:var(--warn)} .rem .dot.ok{background:var(--ok)}
-/* 弹窗 */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:20px 16px;z-index:50;overflow:hidden}
-.modal-bg.show{display:flex}
-.modal{background:#fff;border-radius:14px;width:min(660px,100%);padding:16px 20px;box-shadow:0 10px 40px rgba(0,0,0,.25);max-height:92vh;overflow-y:auto;display:flex;flex-direction:column}
-.modal h3{margin:0 0 8px;font-size:1.1rem}
-.modal .acts{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
-/* AI 输出 */
-.md{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 20px;font-size:.95rem;white-space:pre-wrap;word-break:break-word}
-.md h1,.md h2,.md h3{margin:.6em 0 .3em} .md ul,.md ol{margin:.3em 0 .3em 1.2em} .md code{background:#f0f366;padding:1px 5px;border-radius:4px}
-.muted{color:var(--sub);font-size:.9rem}
-.note{background:#fff8c5;border:1px solid #f0d00055;border-radius:9px;padding:12px 14px;font-size:.9rem;color:#6b5300;margin-bottom:14px;overflow-wrap:break-word;word-break:break-word}
-.warnbox{background:#ffebe9;border:1px solid #ffc1ba;border-radius:9px;padding:12px 14px;font-size:.9rem;color:#7a1c14;margin-bottom:14px;overflow-wrap:break-word;word-break:break-word}
-/* AI 处理中动画 */
-.ai-spinner{display:inline-block;width:40px;height:40px;border:4px solid #e8e8e8;border-top-color:var(--accent);border-radius:50%;animation:ai-spin .7s linear infinite;margin-bottom:4px}
-@keyframes ai-spin{to{transform:rotate(360deg)}}
-.ai-progress-text{animation:ai-pulse 2s ease-in-out infinite}
-@keyframes ai-pulse{0%,100%{opacity:1}50%{opacity:.5}}
-#aiStopBtn{transition:all .2s;cursor:pointer}
-#aiStopBtn:hover{transform:scale(1.05)}
-/* 顶部小工具按钮 */
-.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-/* 分段切换按钮（进度维度：汇总/甘特图） */
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
-.seg-btn{border:0;background:#fff;padding:5px 12px;font-size:.88rem;cursor:pointer;color:var(--sub)}
-.seg-btn.on{background:var(--accent);color:#fff}
-/* 甘特图 */
-.gantt-svg{display:block;width:100%;overflow:visible}
-.gantt-svg .gt-l{font-size:12px;fill:#222;font-weight:500}
-.gantt-svg .gt-s{font-size:10px;fill:#8a8a8a}
-.gantt-svg .gt-axis{font-size:11px;fill:#666}
-.gantt-svg .gt-today{font-size:11px;fill:#e53935;font-weight:600}
-.gantt-legend{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:8px;font-size:.82rem;color:var(--sub)}
-.gantt-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px}
-/* 甘特图交互：整行可点跳转编辑 + 悬停反馈 */
-.gantt-svg g.tk{cursor:pointer}
-.gantt-svg g.tk:hover .gt-l{text-decoration:underline}
-.gantt-svg g.tk:hover rect{stroke-width:2}
-/* 甘特图横向滚动容器：窄屏避免标签被无限缩小 */
-.gantt-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
-.gantt-scroll .gantt-svg{display:block}
-/* 移动端抽屉 */
-.menu-btn{display:none}
-@media(max-width:820px){
-  .side{position:fixed;left:0;top:0;z-index:40;transform:translateX(-100%);transition:.2s}
-  .side.open{transform:none}
-  .menu-btn{display:inline-block}
-  .mask{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:35;display:none}
-  .mask.show{display:block}
-  .main{padding:14px;left:0;right:0;margin-left:0}
-  /* 窄屏 KPI 卡片缩小换行 */
-  .db-stat{padding:10px 12px;border-radius:10px;flex:1 1 22%;min-width:80px}
-  .db-stat .sn{font-size:1.4rem!important}
-  .db-stat .sd{font-size:.7rem}
-  /* 窄屏表格：紧凑行高 + 横向滚动 */
-  th,td{padding:6px 5px;font-size:.82rem;min-width:36px;white-space:nowrap}
-  .panel>table{table-layout:auto} /* 改回auto让列宽自适应内容 */
-  /* 窄屏面板内边距收缩 */
-  .panel{padding:12px;margin-bottom:12px;border-radius:10px}
-  /* 甘特图：窄屏保持最小宽度，横向滚动而非无限缩小 */
-  .gantt-scroll .gantt-svg{min-width:540px}
-
-  /* ── 移动端工具栏整理 ── */
-  .topbar{gap:6px;margin-bottom:10px;flex-wrap:wrap}
-  .topbar .ttl{font-size:1.15rem;margin-right:4px}
-  .topbar .tools{gap:4px;order:10;width:100%;display:flex;flex-wrap:wrap}
-  .topbar .tools button{font-size:.72rem;padding:5px 8px}
-  /* 搜索框在移动端缩小 */
-  .topbar input[type=search]{font-size:.82rem;padding:5px 8px;min-width:80px!important;max-width:160px!important}
-
-  /* 监控视图工具栏：移动端分两行 */
-  .mon-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
-  .mon-toolbar-row1{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
-  .mon-toolbar-row2{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
-  .mon-toolbar select,.mon-toolbar button,.mon-toolbar .seg{font-size:.78rem;padding:4px 7px}
-  .mon-toolbar .muted{font-size:.72rem}
-
-  /* 移动端明细表删除按钮常显（无hover） */
-  .mon-del-btn{opacity:.45;font-size:.85rem;padding:2px 5px}
-  .mon-del:hover .mon-del-btn{opacity:1}
-  /* 表格内标签紧凑 */
-  table .tag{padding:1px 5px;font-size:.7rem;border-radius:3px;white-space:nowrap}
-  /* 操作列固定宽度（匹配表头+内容） */
-  th:last-child,td:last-child{width:80px!important;text-align:center;padding:4px 2px!important;white-space:nowrap}
-  /* 行内编辑控件移动端缩小 */
-  .inline-sel{font-size:.76rem;padding:3px 5px;max-width:100px}
-  .inline-input{font-size:.76rem;padding:3px 5px;min-width:55px;max-width:90px}
-}
-@media(pointer:coarse){ html{font-size:calc(18px*var(--scale))} }
-/* 字体三档（复用错题管家 rem 思路） */
-.fscale{display:flex;gap:6px}
-.fscale button{padding:5px 12px;font-size:.86rem;border:1px solid var(--line);background:#fff;border-radius:6px;cursor:pointer}
-.fscale button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-svg .b{fill:var(--accent)} svg .bg{fill:#eaeef2} svg .r{fill:var(--bad)} svg .y{fill:var(--warn)} svg .g{fill:var(--ok)} svg .t{fill:#333;font-size:14px;font-weight:500}
-/* ── 表格基础样式（防窄屏竖排） ── */
-table{width:100%;border-collapse:collapse}
-th,td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;font-size:.9rem}
-th{background:var(--soft);font-weight:600;color:var(--ink);position:sticky;top:0;z-index:1}
-.panel>table{width:100%;border-collapse:collapse;table-layout:auto}
-.panel>.gantt-scroll,.panel>:has(>table){overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px}
-/* 自定义项目下拉（可搜索+可删除） */
-.proj-select{position:relative}
-.proj-drop{display:none;position:absolute;top:100%;left:0;right:0;z-index:99;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);max-height:200px;overflow-y:auto;margin-top:4px}
-.proj-drop.show{display:block}
-.proj-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;cursor:pointer;font-size:.9rem;gap:6px}
-.proj-item:hover,.proj-item.active{background:var(--accent-bg)}
-.proj-item .pname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.proj-item .pdel{flex:0 0 auto;width:22px;height:22px;border:none;background:none;color:var(--sub);cursor:pointer;border-radius:50%;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s}
-.proj-item:hover .pdel{opacity:1}
-.proj-item .pdel:hover{background:#fee;color:var(--bad)}
-/* ═══════════════ UI 大改版 v2026-08-04 · 一眼可见 ═══════════════ */
-
-/* ── ① KPI 统计卡片：彩色渐变左条 + 内阴影 + 数字语义色 ── */
-.db-stat{
-  border-left-width:5px;
-  border-radius:12px;
-  padding:14px 16px;
-  box-shadow:0 1px 3px rgba(0,0,0,.06);
-  transition:transform .18s, box-shadow .2s, border-color .2s;
-}
-.db-stat:hover{
-  transform:translateY(-2px);
-  box-shadow:0 6px 20px rgba(0,0,0,.1);
-}
-/* 各类型卡片底色渐变 */
-.db-stat.s-total{ background:linear-gradient(135deg,#f0f7ff,#e8f4fd); border-left-color:var(--accent) }
-.db-stat.s-bad{  background:linear-gradient(135deg,#fef2f2,#fce8e8); border-left-color:var(--bad) }
-.db-stat.s-warn{ background:linear-gradient(135deg,#fffbeb,#fef9e7); border-left-color:var(--warn) }
-.db-stat.s-red{  background:linear-gradient(135deg,#fef2f2,#fce8e8); border-left-color:#d93025 }
-.db-stat.s-ok{   background:linear-gradient(135deg,#f0fdf4,#dcfce7); border-left-color:var(--ok) }
-.db-stat.s-info{ background:linear-gradient(135deg,#eff6ff,#dbeafe); border-left-color:#0969da }
-/* 数字加大加粗 + 语义色 */
-.db-stat .sn{
-  font-size:2rem;
-  font-weight:900;
-  letter-spacing:-.02em;
-}
-.db-stat.s-total .sn{ color:var(--accent) }
-.db-stat.s-bad .sn{  color:var(--bad) }
-.db-stat.s-warn .sn{ color:var(--warn) }
-.db-stat.s-red .sn{  color:#d93025 }
-.db-stat.s-ok .sn{   color:var(--ok) }
-.db-stat.s-info .sn{ color:#0969da }
-
-/* ── ② 项目看板卡片：顶部彩条 + 浮起阴影 ── */
-.proj-card{
-  border-top-width:4px;
-  border-radius:12px;
-  box-shadow:0 1px 4px rgba(0,0,0,.05);
-  transition:transform .18s, box-shadow .2s;
-}
-.proj-card:hover{
-  transform:translateY(-2px);
-  box-shadow:0 8px 24px rgba(0,0,0,.1);
-}
-.proj-card .pc-pct{ font-size:1.35rem }
-
-/* ── ③ 面板：标题左侧粗强调条 + 卡片浮起 ── */
-.panel{
-  border-radius:14px;
-  box-shadow:0 2px 6px rgba(0,0,0,.05);
-  transition:box-shadow .2s, transform .15s;
-}
-.panel:hover{
-  box-shadow:0 6px 20px rgba(0,0,0,.08);
-}
-.panel h3{
-  position:relative;
-  padding-left:16px;
-  font-weight:800;
-  font-size:1.18rem;
-  letter-spacing:.02em;
-}
-.panel h3::before{
-  content:"";
-  position:absolute;
-  left:0;
-  top:2px;
-  bottom:2px;
-  width:5px;
-  border-radius:4px;
-  background:linear-gradient(180deg,var(--accent),#66b3ff);
-}
-
-/* ── ④ 侧栏选中态：强渐变底 + 图标发光 + 加粗 ── */
-.side a.active{
-  background:linear-gradient(90deg,rgba(47,129,247,.22),rgba(47,129,247,.06));
-  border-left-width:4px;
-  color:#fff;
-  font-weight:700;
-  font-size:.98rem;
-}
-.side a.active .ico{
-  filter:drop-shadow(0 0 6px rgba(47,129,247,.8));
-  transform:scale(1.1);
-}
-/* 侧栏悬停预览 */
-.side a:hover:not(.active){
-  background:linear-gradient(90deg,rgba(255,255,255,.06),transparent);
-  border-left-color:rgba(255,255,255,.15);
-}
-
-/* ── ⑤ 状态标签：大圆角胶囊 + 语义色加深 ── */
-.tag{
-  padding:4px 12px;
-  border-radius:999px;
-  font-size:.78rem;
-  font-weight:600;
-  letter-spacing:.01em;
-}
-.tag.bad{  background:linear-gradient(135deg,#fee2e2,#fecaca); color:#991b1b; border:1px solid #fca5a5 }
-.tag.warn{ background:linear-gradient(135deg,#fef3c7,#fde68a); color:#92400e; border:1px solid #fcd34d }
-.tag.ok{   background:linear-gradient(135deg,#d1fae5,#a7f3d0); color:#065f46; border:1px solid #6ee7b7 }
-.tag.gray{ background:linear-gradient(135deg,#f1f5f9,#e2e8f0); color:#475569; border:1px solid #cbd5e1 }
-.tag.info{ background:linear-gradient(135deg,#dbeafe,#bfdbfe); color:#1e40af; border:1px solid #93c5fd }
-
-/* ── ⑥ 按钮：立体浮起 + 描边光晕 ── */
-.btn{
-  transition:all .18s cubic-bezier(.4,0,.2,1);
-  border:1px solid transparent;
-  font-weight:600;
-  letter-spacing:.01em;
-}
-.btn:hover{
-  box-shadow:0 4px 16px rgba(47,129,247,.35), 0 0 0 1px rgba(47,129,247,.15);
-  transform:translateY(-2px);
-}
-.btn:active{ transform:translateY(0); box-shadow:0 1px 4px rgba(47,129,247,.25) }
-.btn.ghost{
-  transition:all .18s;
-  font-weight:500;
-}
-.btn.ghost:hover{
-  box-shadow:0 2px 10px rgba(0,0,0,.08);
-  border-color:var(--accent);
-  color:var(--accent);
-  background:linear-gradient(135deg,#fff, #f0f7ff);
-  transform:translateY(-1px);
-}
-.btn.danger:hover{
-  box-shadow:0 4px 16px rgba(207,34,46,.35);
-}
-.btn.sm:hover{ transform:translateY(-1px) }
-
-/* ── ⑦ chip 筛选按钮 ── */
-.chip{
-  transition:all .18s;
-  font-weight:500;
-  border-width:1.5px;
-}
-.chip.on{
-  font-weight:700;
-  box-shadow:0 2px 8px rgba(47,129,247,.25);
-}
-.chip:hover:not(.on){
-  border-color:var(--accent);
-  color:var(--accent);
-  background:rgba(47,129,247,.04);
-  transform:translateY(-1px);
-}
-
-/* ── ⑧ 表格：表头吸顶 + 斑马行 + 行悬停高亮 ── */
-th{
-  position:sticky;
-  top:0;
-  z-index:1;
-  font-weight:700;
-  font-size:.88rem;
-  text-transform:none;
-  letter-spacing:.02em;
-  background:linear-gradient(180deg,#f8fafc,#f1f5f9);
-  border-bottom:2px solid var(--line);
-}
-tr:nth-child(even){ background:rgba(248,250,252,.5) }
-.row-link{ transition:background .12s }
-.row-link:hover{ background:linear-gradient(90deg,#f0f6ff,#eef5ff) }
-
-/* ── ⑨ 维度迷你网格芯片 ── */
-.dim-chip{
-  border-radius:10px;
-  transition:all .18s;
-  border-width:1.5px;
-}
-.dim-chip:hover{
-  border-color:var(--accent);
-  box-shadow:0 3px 12px rgba(47,129,247,.15);
-  transform:translateY(-1px);
-}
-
-/* ── ⑩ 弹窗：更精致 ── */
-.modal{
-  border-radius:16px;
-  box-shadow:0 16px 48px rgba(0,0,0,.22), 0 0 0 1px rgba(0,0,0,.04);
-}
-.modal-bg{ backdrop-filter:blur(3px) }
-
-/* ── ⑪ 滚动条美化 ── */
-.side::-webkit-scrollbar,.modal::-webkit-scrollbar,.slide-panel::-webkit-scrollbar{width:7px;height:7px}
-.side::-webkit-scrollbar-thumb,.modal::-webkit-scrollbar-thumb,.slide-panel::-webkit-scrollbar-thumb{background:#3d444d;border-radius:4px}
-.main::-webkit-scrollbar,.panel::-webkit-scrollbar{width:10px;height:10px}
-.main::-webkit-scrollbar-thumb,.panel::-webkit-scrollbar-thumb{background:#b0bac8;border-radius:6px}
-.main::-webkit-scrollbar-thumb:hover,.panel::-webkit-scrollbar-thumb:hover{background:#8b949e}
-
-/* ── ⑫ 全局字体平滑 + 标题点缀 ── */
-body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
-.topbar .ttl{
-  letter-spacing:.5px;
-  background:linear-gradient(135deg,var(--ink),var(--accent));
-  -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;
-  background-clip:text;
-}
-
-/* ── ⑬ 分段切换 ── */
-.seg{ border-width:1.5px; border-radius:8px }
-.seg-btn{ font-weight:500; transition:all .15s }
-.seg-btn.on{ font-weight:700 }
-.seg-btn:hover:not(.on){ background:var(--soft); color:var(--ink) }
-
-/* ── ⑭ 提醒项/待办卡 ── */
-.rem{ border-radius:10px; transition:all .15s }
-.rem:hover{ box-shadow:0 2px 8px rgba(0,0,0,.06); border-color:var(--accent) }
-.todo-card{ border-radius:11px; border-width:1.2px }
-.todo-card:hover{ transform:translateX(3px); box-shadow:0 4px 14px rgba(0,0,0,.07) }
-
-/* ── ⑮ 代码块/输出区 ── */
-.md,.panel,#view{ scrollbar-width:thin }
-
-/* ── ⑯ 今日简报增强 ── */
-.brief-card{
-  border-radius:12px;
-  box-shadow:0 2px 8px rgba(212,175,55,.1);
-  border-width:1.2px;
-}
-/* ===== 任务看板（参考 Trello/Linear 风格） ===== */
-.kb-wrap{display:flex;gap:8px;overflow-x:auto;padding:4px 0 8px;align-items:flex-start}
-.kb-col{flex:1;min-width:180px;max-width:260px;background:transparent;border:none;padding:0 4px;display:flex;flex-direction:column}
-.kb-col.kb-over{background:transparent}
-.kb-col-h{display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:.8rem;padding:6px 8px 5px;color:var(--sub);border-bottom:2px solid #e8ecf0;margin-bottom:6px}
-.kb-cnt{background:#eaf0f5;color:#5a6577;font-size:.72rem;font-weight:600;padding:1px 7px;border-radius:10px;min-width:18px;text-align:center}
-.kb-cards{display:flex;flex-direction:column;gap:3px;flex:1;overflow-y:auto;padding:1px 2px 6px}
-.kb-empty{color:#9ca3af;font-size:.76rem;text-align:center;padding:16px 6px;border:2px dashed #e5e7eb;border-radius:8px;color:#c0c4cc}
-/* 卡片：白底 + 微阴影 + 圆角，hover 上浮 */
-.kb-card{background:#fff;border:1px solid #e2e5e8;border-radius:7px;padding:7px 9px;cursor:pointer;transition:all .15s ease;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-.kb-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.1);border-color:#d0d4d8;transform:translateY(-1px)}
-.kb-card-t{font-weight:600;font-size:.82rem;line-height:1.35;color:var(--ink);margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
-.kb-card-m{font-size:.7rem;color:var(--sub);margin-bottom:3px;display:flex;align-items:center;gap:4px}
-.kb-card-m .muted{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:85px}
-.kb-card-f{display:flex;gap:3px;align-items:center;flex-wrap:wrap;margin-top:3px}
-.kb-card-f .tag{font-size:.62rem;padding:2px 7px;white-space:nowrap;border-radius:4px;font-weight:500}
-.kb-card-f > span:not(.tag){white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px;font-size:.65rem;color:var(--sub)}
-.kb-sel{margin-top:8px;width:100%;padding:4px 6px;font-size:.72rem;border:1px solid #e2e5e8;border-radius:6px;background:#fafbfc;color:var(--ink);cursor:pointer;transition:border-color .15s}
-.kb-sel:focus{border-color:var(--accent);outline:none}
-/* ===== 数据趋势 ===== */
-.trend-h{font-weight:700;font-size:.92rem;margin-bottom:8px}
-.trend-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:.8rem;color:var(--sub)}
-.trend-legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px}
-/* ===== 导入弹窗 ===== */
-.imp-tip{font-size:.84rem;color:var(--sub);line-height:1.5}
-/* ===== 项目档案模块 ===== */
-.tab-row{display:flex;gap:6px;flex-wrap:wrap;border-bottom:2px solid #e8ecf0;margin-bottom:4px}
-.tab-btn{background:none;border:none;padding:8px 14px;font-size:.88rem;color:var(--sub);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-weight:600}
-.tab-btn:hover{color:var(--ink)}
-.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
-.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
-.fld{display:flex;flex-direction:column;gap:4px;font-size:.84rem;color:var(--sub)}
-.fld input,.fld select,.fld textarea{border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:.9rem;font-family:inherit;background:var(--card);color:var(--ink)}
-.fld input:focus,.fld textarea:focus{border-color:var(--accent);outline:none}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px}
-.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:6px}
-.kpi{background:linear-gradient(135deg,#f5f8ff,#eef3ff);border:1px solid #e3e9f5;border-radius:12px;padding:14px;text-align:center}
-.kpi-v{font-size:1.5rem;font-weight:800;color:var(--accent);line-height:1.1}
-.kpi-l{font-size:.78rem;color:var(--sub);margin-top:4px}
-table.mini{border-collapse:collapse;width:100%;font-size:.84rem;margin-top:4px}
-table.mini th,table.mini td{border:1px solid #e8ecf0;padding:6px 8px;text-align:left;vertical-align:top}
-table.mini th{background:#f3f6fa;color:#465061;font-weight:600;white-space:nowrap}
-table.mini input,table.mini select{border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:.84rem;font-family:inherit;background:#fff;color:var(--ink);max-width:100%}
-.alert-warn{background:#fff6e6;border:1px solid #ffd591;border-radius:10px;padding:10px 14px;color:#8a5a00;font-size:.88rem}
-/* 工期节点条（看板顶部） */
-.ms-strip{background:#f7f9fc;border:1px solid #e3e9f2;border-radius:12px;padding:10px 14px;margin-bottom:12px}
-.ms-strip-h{font-size:.86rem;font-weight:700;color:var(--sub);margin-bottom:8px}
-.ms-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
-.ms-chip{display:flex;align-items:center;gap:6px;white-space:nowrap;background:#fff;border:1px solid #e3e9f2;border-radius:20px;padding:5px 12px;font-size:.8rem;color:var(--ink)}
-.ms-chip .ms-dot{width:8px;height:8px;border-radius:50%;background:#9aa4b2}
-.ms-chip.warn{border-color:#ffd591;background:#fff7e6}.ms-chip.warn .ms-dot{background:#fa8c16}
-.ms-chip.bad{border-color:#ffa39e;background:#fff1f0;color:#cf222e}.ms-chip.bad .ms-dot{background:#cf222e}
-.ms-chip.ok{border-color:#b7eb8f;background:#f6ffed}.ms-chip.ok .ms-dot{background:#52c41a}
-.ms-chip .ms-date{color:var(--sub);font-size:.74rem}
-</style>
-</head>
-<body>
-<!-- 版本横幅（每次改版必更新版本号 + meta[name=app-version]） -->
-<div id="verBanner" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:6px 16px;font-size:.82rem;font-weight:600;position:relative;z-index:9999;cursor:pointer" onclick="this.style.display='none'"   title="点击关闭 · 若版本号低于 v2026-08-03-21:40 说明浏览器缓存了旧版">
-  📦 工作台版本 <b>v2026-08-11 (15:50)</b> · AI拆解导入彻底重写(全局函数+cloneNode防重复+点击即时反馈) · 点击关闭此条
-</div>
-<div class="layout">
-  <div class="mask" id="mask" onclick="closeSide()"></div>
-  <nav class="side" id="side">
-    <h1>🧭 项目管理工作台</h1>
-    <div class="grp">总览</div>
-    <a data-view="dashboard" class="active"><span class="ico">🏠</span>驾驶舱</a>
-    <a data-view="tasks"><span class="ico">🗂</span>任务台账</a>
-    <a data-view="kanban"><span class="ico">📋</span>任务看板</a>
-    <a data-view="trend"><span class="ico">📊</span>数据趋势</a>
-    <a data-view="archive"><span class="ico">📑</span>项目档案</a>
-    <div class="grp">管控维度（拖动可排序）</div>
-    <div id="dimNav"></div>
-    <div class="grp">会议 & 汇报</div>
-    <a data-view="meetings"><span class="ico">📝</span>会议纪要</a>
-    <div class="grp">智能 & 系统</div>
-    <a data-view="ai"><span class="ico">🤖</span>AI 助手</a>
-    <a data-view="reports"><span class="ico">📋</span>工作汇总</a>
-    <a data-view="notes"><span class="ico">📝</span>工作笔记</a>
-    <a data-view="automation"><span class="ico">⚙️</span>自动化规则</a>
-    <a data-view="recycled"><span class="ico">🗑️</span>回收站</a>
-    <a data-view="settings"><span class="ico">🔧</span>设置 / 备份</a>
-    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>15:50 · AI拆解导入彻底重写(全局函数+cloneNode防重复+点击即时反馈)</div>
-  </nav>
-
-  <main class="main">
-    <div class="topbar">
-      <button class="btn ghost sm menu-btn" onclick="openSide()">☰</button>
-      <div class="ttl" id="viewTitle">驾驶舱</div>
-      <div style="display:flex;flex:1;min-width:120px;max-width:280px;align-items:center">
-        <input id="globalSearch" type="search" placeholder="🔍 搜索任务 / 报告…" style="flex:1;min-width:0;padding:7px 10px;border:1px solid var(--line);border-radius:8px 0 0 8px;font-size:.88rem;border-right:none" oninput="onGlobalSearch(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();onGlobalSearch(this.value)}">
-        <button class="btn ghost sm" onclick="const v=document.getElementById('globalSearch').value;onGlobalSearch(v)" style="border-radius:0 8px 8px 0;border-left:none;padding:7px 10px;margin:0" title="按回车或点击搜索">🔍</button>
-      </div>
-      <div class="tools">
-        <button class="btn ghost sm" onclick="exportJSON()">⬆ 导出备份</button>
-        <button class="btn ghost sm" onclick="importJSON()">⬇ 导入</button>
-        <button class="btn ghost sm" onclick="openTaskModal()">＋ 新建任务</button>
-      </div>
-    </div>
-    <div id="view"></div>
-  </main>
-</div>
-
-<!-- 任务弹窗 -->
-<div class="modal-bg" id="taskModal">
-  <div class="modal">
-    <h3 id="taskModalT">新建任务</h3>
-    <div class="warnbox" id="taskAssignHint" style="display:none"></div>
-    <div class="warnbox" id="taskFeishuHint" style="display:none"></div>
-    <div class="grid2">
-      <div>
-        <label class="fld">所属项目</label>
-        <div class="proj-select" id="projSelectWrap">
-          <input id="f-project" placeholder="选择或输入项目名" autocomplete="off" oninput="filterProjList(this.value)" onfocus="showProjDrop()" onblur="setTimeout(hideProjDrop,150)">
-          <div class="proj-drop" id="projDrop"></div>
-        </div>
-      </div>
-      <div>
-        <label class="fld">管控维度</label>
-        <select id="f-dim"></select>
-      </div>
-    </div>
-    <label class="fld">任务 / 事项标题</label>
-    <input id="f-title" placeholder="如：3#楼水电预留预埋滞后跟进">
-    <div class="grid2">
-      <div id="statusGridItem">
-        <label class="fld">状态</label>
-        <select id="f-status"></select>
-      </div>
-      <div>
-        <label class="fld">优先级</label>
-        <select id="f-priority"><option>高</option><option selected>中</option><option>低</option></select>
-      </div>
-      <div>
-        <label class="fld">责任人</label>
-        <input id="f-owner" placeholder="姓名">
-      </div>
-      <div>
-        <label class="fld">截止日期</label>
-        <input id="f-due" type="date">
-      </div>
-      <div>
-        <label class="fld">完成日期</label>
-        <input id="f-completed" type="date">
-      </div>
-      <div id="extraFields"></div>
-      <div id="progressRow">
-        <label class="fld">实际进度 %</label>
-        <input id="f-progress" type="number" min="0" max="100" placeholder="0-100" style="width:100%">
-      </div>
-    </div>
-    <label class="fld">备注 / 说明</label>
-    <textarea id="f-notes" rows="3" style="min-height:60px"></textarea>
-    <div class="acts">
-      <button class="btn danger ghost sm" id="taskDel" onclick="deleteTask()" style="margin-right:auto">删除</button>
-      <button class="btn ghost" onclick="closeModal('taskModal')">取消</button>
-      <button class="btn" onclick="saveTask()">保存</button>
-    </div>
-  </div>
-</div>
-
-<!-- 通用弹窗（AI预览/导入等） -->
-<div class="modal-bg" id="genModal">
-  <div class="modal">
-    <h3 id="genModalT">提示</h3>
-    <div id="genModalBody"></div>
-    <div class="acts" id="genModalActs"></div>
-  </div>
-</div>
-
-<!-- [10b] 首次引导弹窗 -->
-<div class="modal-bg" id="onboardModal" style="z-index:60">
-  <div class="modal" style="max-width:560px">
-    <h3 style="margin-top:0">👋 欢迎使用「通用项目管理工作台」</h3>
-    <p class="muted" style="margin:6px 0 14px">第一次打开？花 30 秒认识四个核心区域，后面用起来就顺了。</p>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <div style="display:flex;gap:10px;align-items:flex-start;background:#f6f8fa;border-radius:10px;padding:10px 12px">
-        <span style="font-size:1.4rem;flex-shrink:0">🗂</span>
-        <div><b>任务台账</b><br><span class="muted" style="font-size:.86rem">按 11 个管控维度（进度/质量/安全…）记任务，每个维度自带甘特图看进度。</span></div>
-      </div>
-      <div style="display:flex;gap:10px;align-items:flex-start;background:#f6f8fa;border-radius:10px;padding:10px 12px">
-        <span style="font-size:1.4rem;flex-shrink:0">📋</span>
-        <div><b>工作汇总</b><br><span class="muted" style="font-size:.86rem">一键生成日报 / 周报 / 月报，还能导出 Word、PDF。</span></div>
-      </div>
-      <div style="display:flex;gap:10px;align-items:flex-start;background:#f6f8fa;border-radius:10px;padding:10px 12px">
-        <span style="font-size:1.4rem;flex-shrink:0">📝</span>
-        <div><b>工作笔记 & 会议纪要</b><br><span class="muted" style="font-size:.86rem">每天写笔记，AI 帮你提炼总结和待办；会议纪要能自动拆成任务。</span></div>
-      </div>
-      <div style="display:flex;gap:10px;align-items:flex-start;background:#f0f7ff;border-radius:10px;padding:10px 12px;border:1px solid #bae0ff">
-        <span style="font-size:1.4rem;flex-shrink:0">🤖</span>
-        <div><b>想用 AI 功能？先配置</b><br><span class="muted" style="font-size:.86rem">AI 拆解纪要、润色日报等需先配置：填「云端代理地址」或「API Key」。点下方「开始使用」会直接带你到设置页填好。</span></div>
-      </div>
-      <div style="display:flex;gap:10px;align-items:flex-start;background:#fff8e6;border-radius:10px;padding:10px 12px;border:1px solid #ffe08a">
-        <span style="font-size:1.4rem;flex-shrink:0">☁️</span>
-        <div><b>记得常备份</b><br><span class="muted" style="font-size:.86rem">数据存在本浏览器，清缓存会丢。重要节点点右上角「⬆ 导出备份」，或在设置里配 GitHub 自动备份。</span></div>
-      </div>
-    </div>
-    <div class="acts" style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end">
-      <button class="btn ghost sm" onclick="localStorage.setItem('wb_onboarded_v1','1');closeModal('onboardModal')">不再提示</button>
-      <button class="btn sm" style="background:var(--accent);color:#fff" onclick="localStorage.setItem('wb_onboarded_v1','1');closeModal('onboardModal');navigateTo('settings')">🚀 开始使用并配置</button>
-    </div>
-  </div>
-</div>
-
-<script>
 /* =========================================================================
    通用项目管理工作台 · 单文件 HTML（参照错题管家「GitHub托管 + 阿里云AI代理」模式）
    代码分区地图（非IT维护者 / 未来AI改代码看这里）：
@@ -1507,9 +737,8 @@ function renderTasks(){
   const archBtn=(curProj&&!curProj.archived)?`<button class="btn ghost sm" onclick="event.stopPropagation();archiveProject('${curProj.id}','${esc(curProj.name)}')" title="归档该项目（任务移入回收站，可恢复）" style="color:var(--warn);font-size:.78rem">📦 归档此项目</button>`:(curProj&&curProj.archived)?`<button class="btn ghost sm" onclick="event.stopPropagation();unarchiveProject('${curProj.id}')" title="恢复已归档项目" style="color:var(--ok);font-size:.78rem">📤 恢复项目</button>`:'';
   return `<div class="panel" style="margin-bottom:12px;background:linear-gradient(135deg,#f5f8ff,#eaf1ff);border:1px solid #d6e4ff">
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <input id="quickAddInput" type="text" placeholder="💡 随手记：一句话记下任务，回车即存（例：1号楼消防管打压试验）" style="flex:1;min-width:180px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:.95rem" onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddTask();}">
-      <select id="quickProj" title="归属项目" style="padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;min-width:120px">${data.projects.filter(p=>!p.archived).map(p=>`<option value="${p.id}" ${(curFilter&&curFilter!=='全部项目'&&p.id===curFilter)||(!curFilter||curFilter==='全部项目')&&data.projects.filter(x=>!x.archived).indexOf(p)===0?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
-      <button class="btn ghost sm" onclick="startQuickVoice()" id="btnQuickVoice" title="语音输入（中文）" style="font-size:.95rem;padding:4px 6px;line-height:1">🎤</button>
+      <input id="quickAddInput" type="text" placeholder="💡 随手记：一句话记下任务，回车即存（例：1号楼消防管打压试验）" style="flex:1;min-width:220px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:.95rem" onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddTask();}">
+      <button class="btn ghost sm" onclick="startQuickVoice()" id="btnQuickVoice" title="语音输入（中文）" style="font-size:1.2rem;padding:8px 10px">🎤</button>
       <select id="quickDim" title="归类维度" style="padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff">${DIMENSIONS.map(d=>'<option value="'+d.key+'">'+d.icon+' '+d.label+'</option>').join('')}</select>
       <button class="btn" style="background:var(--accent);color:#fff;white-space:nowrap" onclick="quickAddTask()">＋ 记一笔</button>
     </div>
@@ -1786,13 +1015,7 @@ function impParse(){
     ${_impTasks.slice(0,50).map(t=>`<tr><td>${esc(projName(t.projectId))}</td><td>${DIM[t.dimension]?DIM[t.dimension].label:'-'}</td><td>${esc(t.title)}</td><td>${esc(t.status)}</td><td>${esc(t.owner)}</td></tr>`).join('')}
     </tbody></table>${_impTasks.length>50?'<div class="muted">…仅显示前 50 条</div>':''}</div>`;
   document.getElementById('impPreview').innerHTML=prev;
-  // 用 showGen 统一渲染按钮（复用其 cloneNode+getElementById+addEventListener 方案）
-  showGen('📥 批量导入任务', prev, [
-    {t:'取消',cls:'btn ghost', fn:()=>closeModal('genModal')},
-    {t:'✅ 确认导入 '+_impTasks.length+' 条',cls:'btn',fn:()=>impConfirm()}
-  ]);
-  // showGen 会覆盖 impPreview（因为 genModalBody 被重写），所以重新写入
-  document.getElementById('genModalBody').innerHTML='<div id="impPreview">'+prev+'</div>';
+  document.getElementById('genModalActs').innerHTML=`<button class="btn ghost" onclick="closeModal('genModal')">取消</button><button class="btn" style="background:var(--ok);color:#fff" onclick="impConfirm()">✅ 确认导入 ${_impTasks.length} 条</button>`;
 }
 function impConfirm(){
   if(!_impTasks.length) return;
@@ -2090,11 +1313,8 @@ function toast(msg){
   clearTimeout(t._timer); t._timer=setTimeout(function(){t.style.opacity='0';},1800);
 }
 function showToast(m){ toast(m); }
-function _newTask(title, dim, status, pid){
-  if(!pid){
-    // 优先用当前筛选的项目；没有则取第一个非归档项目
-    pid = (curFilter&&curFilter!=='全部项目')? curFilter : (data.projects.find(p=>!p.archived)||{}).id || '';
-  }
+function _newTask(title, dim, status){
+  const pid = data.projects.length? data.projects[0].id : '';
   data.tasks.push({
     id:uid(), projectId:pid, dimension:dim, title:title,
     status:status||((DIM[dim]&&DIM[dim].statusOpts&&DIM[dim].statusOpts[0])||'进行中'),
@@ -2109,9 +1329,7 @@ function quickAddTask(){
   const title=inp.value.trim();
   if(!title){ inp.focus(); toast('先写点什么再记～'); return; }
   const dim=document.getElementById('quickDim')?document.getElementById('quickDim').value:'progress';
-  const projSel=document.getElementById('quickProj');
-  const pid=projSel?projSel.value:'';
-  _newTask(title, dim, null, pid);
+  _newTask(title, dim);
   inp.value='';
   toast('已记录 ✓ 点列表行可补全细节');
   const n=document.getElementById('quickAddInput'); if(n) n.focus();
@@ -2320,12 +1538,8 @@ async function aiAssign(){
     const sys='你是工程项目管理助手。把用户给的文字拆成任务清单，仅输出JSON数组，每条:{projectHint(项目名称关键词),dimension(从[进度,质量,安全·环保,产值·成本,物资设备,风险,劳务·人力,合同·分包,图纸·资料,变更·签证,巡检·巡查]选一),title,owner,due(YYYY-MM-DD或空),priority(高/中/低),notes}。不要解释。';
     const c=await aiChat([{role:'system',content:sys},{role:'user',content:text}],{temp:0.2, signal});
     let arr=[]; try{ arr=JSON.parse((c.match(/\[[\s\S]*\]/)||[c])[0]); }catch(e){ throw new Error('AI返回无法解析为JSON'); }
-    // 预览 + 人工确认导入（用全局变量+全局函数，避免闭包作用域问题）
-    _pendingImportArr=arr;
-    showGen('AI 拆解结果（请核对后导入）', previewTasks(arr), [
-      {t:'✅ 确认导入 '+arr.length+' 条',cls:'btn',fn:confirmAiImport},
-      {t:'取消',cls:'btn ghost',fn:()=>closeModal('genModal')}
-    ]);
+    // 预览 + 人工确认导入
+    showGen('AI 拆解结果（请核对后导入）', previewTasks(arr), [{t:'✅ 确认导入',cls:'btn',fn:()=>{importTasks(arr);closeModal('genModal');}},{t:'取消',cls:'btn ghost',fn:()=>closeModal('genModal')}]);
   },'拆解中…');
 }
 function previewTasks(arr){
@@ -2333,25 +1547,15 @@ function previewTasks(arr){
   return `<table><thead><tr><th>项目关键词</th><th>维度</th><th>事项</th><th>责任人</th><th>截止</th></tr></thead><tbody>${rows}</tbody></table><div class="muted" style="margin-top:8px">导入时会按「项目关键词」匹配在管项目；匹配不到则归入第一个项目。新任务标记「AI待复核」。</div>`;
 }
 function importTasks(arr){
-  if(!arr||!arr.length){ toast('⚠️ AI 没有拆出任何任务，请重试'); return; }
-  // 匹配项目：先按项目名关键词，匹配不到则归入第一个非归档项目
-  const allProjs=data.projects.filter(p=>!p.archived);
-  let n=0, unmatched=0;
+  let n=0;
   arr.forEach(t=>{
-    let p=null;
-    if(t.projectHint){
-      const hint=String(t.projectHint).trim();
-      p=data.projects.find(x=>x.name===hint)||data.projects.find(x=>x.name.includes(hint)||hint.includes(x.name));
-    }
-    if(!p) p=allProjs[0];
-    if(!p){ unmatched++; return; }
-    const dimKey=(DIMENSIONS.find(d=>d.label===t.dimension)||DIMENSIONS.find(d=>d.key===t.dimension)||{key:'progress'}).key;
+    const p=data.projects.find(x=>x.name.includes(t.projectHint))||activeProjects()[0];
+    if(!p)return;
+    const dimKey=(DIMENSIONS.find(d=>d.label===t.dimension)||{key:t.dimension}).key;
     data.tasks.push({id:uid(),projectId:p.id,dimension:dimKey,title:t.title||'(未命名)',status:(DIM[dimKey]&&DIM[dimKey].statusOpts[0])||'未开始',owner:t.owner||'',due:t.due||'',priority:t.priority||'中',reviewed:false,notes:t.notes||'',createdAt:today(),updatedAt:today()});
     n++;
   });
-  save(); render();
-  if(n>0) toast('✅ 已导入 '+n+' 条任务（待复核）'+(unmatched?('，'+unmatched+' 条未匹配项目已归入默认项目'):''));
-  else toast('⚠️ 导入失败：请先到「设置」添加项目');
+  save(); render(); alert('已导入 '+n+' 条（待复核）');
 }
 /* ---------- [7b] 文档解析库（按需懒加载，保持单文件离线可用） ---------- */
 const _libs={};
@@ -3565,7 +2769,7 @@ function renderNotes(){
         ${!isArchived?`<div class="todo-archive-picker" id="archive-picker-${t.id}" style="display:none;margin-top:8px;padding:10px;background:#f8f9fa;border:1px solid #e0e0e0;border-radius:8px;font-size:.85rem">
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
             <label class="muted" style="font-size:.82rem;white-space:nowrap">项目：</label>
-            <select id="arch-proj-${t.id}" style="padding:4px 8px;border-radius:6px;border:1px solid #ccc;font-size:.85rem">${data.projects.filter(p=>!p.archived).map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>
+            <select id="arch-proj-${t.id}" style="padding:4px 8px;border-radius:6px;border:1px solid #ccc;font-size:.85rem">${activeProjects().map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>
             <label class="muted" style="font-size:.82rem;white-space:nowrap">维度：</label>
             <select id="arch-dim-${t.id}" style="padding:4px 8px;border-radius:6px;border:1px solid #ccc;font-size:.85rem">${DIMENSIONS.map(d=>`<option value="${d.key}">${d.icon} ${d.label}</option>`).join('')}</select>
           </div>
@@ -3758,7 +2962,7 @@ function confirmArchiveTodo(noteId, todoId){
   const projectId=projEl.value;
   const dimension=dimEl.value;
   if(!projectId||!dimension){alert('请先选择项目和维度');return;}
-  const proj=data.projects.find(p=>p.id===projectId);
+  const proj=activeProjects().find(p=>p.id===projectId);
   const dim=DIM[dimension];
   // 创建正式任务
   const task={
@@ -4135,39 +3339,12 @@ function automationHits(){
 /* ---------- 通用工具 ---------- */
 function showModal(id){document.getElementById(id).classList.add('show');}
 function closeModal(id){document.getElementById(id).classList.remove('show');}
-let _genActs=[]; // showGen 弹窗按钮回调
-let _pendingImportArr=null; // AI拆解待导入任务数组（全局变量，避免闭包作用域问题）
 function showGen(title,body,acts){
   document.getElementById('genModalT').textContent=title;
   document.getElementById('genModalBody').innerHTML=body;
-  _genActs=acts||[];
-  const actEl=document.getElementById('genModalActs');
-  // 用 cloneNode 彻底清除旧按钮+旧监听器（防止内存泄漏和重复触发）
-  const newActEl=actEl.cloneNode(false); // false=浅克隆（不复制子节点）
-  actEl.parentNode.replaceChild(newActEl,actEl);
-  // 重新获取引用（因为 replaceChild 后原引用失效）
-  const finalEl=document.getElementById('genModalActs');
-  finalEl.innerHTML = _genActs.map((a,i)=>`<button id="_gb${i}" class="${a.cls||'btn ghost'}">${a.t}</button>`).join('');
-  // 方案：直接用 getElementById + onclick 赋值（静态HTML中的按钮，非innerHTML动态注入）
-  // 这是 JS 里最原始、兼容性最好的绑定方式
-  _genActs.forEach((a,i)=>{
-    var b=document.getElementById('_gb'+i);
-    if(!b)return;
-    // 即时视觉反馈：点击后立刻变文字，让用户知道"按到了"
-    b.addEventListener('click',function(){
-      this.textContent='⏳ 处理中…';this.disabled=true;
-      try{ if(a.fn)a.fn(); }catch(e){ alert('导入出错：'+e.message);this.textContent=a.t;this.disabled=false; }
-    });
-  });
+  document.getElementById('genModalActs').innerHTML = acts.map((a,i)=>`<button class="${a.cls||'btn ghost'}" id="ga${i}">${a.t}</button>`).join('');
+  acts.forEach((a,i)=>{const el=document.getElementById('ga'+i); if(el&&a.fn) el.onclick=a.fn;});
   showModal('genModal');
-}
-// AI拆解确认导入：全局函数（不走闭包），读全局 _pendingImportArr
-function confirmAiImport(){
-  if(!_pendingImportArr||!_pendingImportArr.length){ toast('⚠️ 没有可导入的任务'); return; }
-  var arr=_pendingImportArr;
-  _pendingImportArr=null; // 防重复导入
-  importTasks(arr);
-  closeModal('genModal');
 }
 function reportIdx(id){ return (data.reports||[]).findIndex(x=>x.id===id); }
 function copyReport(id){ const i=reportIdx(id); const x=(data.reports||[])[i]; if(x) copyText(x.content); }
@@ -4908,7 +4085,6 @@ function renderMilestoneStrip(){
     var dp=e.target.closest('[data-del-proj]');
     if(dp){ e.preventDefault(); e.stopPropagation();
       delProj(dp.getAttribute('data-del-proj'),dp.getAttribute('data-del-proj-name')); return; }
-    // 通用弹窗按钮 [data-gen-act] 由 showGen 直接 addEventListener 绑定，不走这里（避免重复触发）
   });
   // 回收站：checkbox 变化时同步按钮状态
   document.addEventListener('change',function(e){
@@ -4934,18 +4110,3 @@ function renderMilestoneStrip(){
      延迟 100ms 后强制再刷一次，用户无感知，但能根治白屏 */
   setTimeout(function(){ render(); }, 100);
 })();
-
-</script>
-
-<script>
-// PWA：注册 Service Worker，使应用可安装为桌面程序且支持离线打开
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('./sw.js').catch(function (e) {
-      console.warn('Service Worker 注册失败（不影响主程序正常使用）：', e);
-    });
-  });
-}
-</script>
-</body>
-</html>
