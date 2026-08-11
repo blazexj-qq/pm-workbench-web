@@ -622,7 +622,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
 <body>
 <!-- 版本横幅（每次改版必更新版本号 + meta[name=app-version]） -->
 <div id="verBanner" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:6px 16px;font-size:.82rem;font-weight:600;position:relative;z-index:9999;cursor:pointer" onclick="this.style.display='none'"   title="点击关闭 · 若版本号低于 v2026-08-03-21:40 说明浏览器缓存了旧版">
-  📦 工作台版本 <b>v2026-08-11 (10:36)</b> · 设置页提醒区域排版紧凑化 + 项目下拉修复 · 点击关闭此条
+  📦 工作台版本 <b>v2026-08-11 (14:08)</b> · 任务台账项目筛选修复(改ID匹配) + 设置页排版 · 点击关闭此条
 </div>
 <div class="layout">
   <div class="mask" id="mask" onclick="closeSide()"></div>
@@ -645,7 +645,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
     <a data-view="automation"><span class="ico">⚙️</span>自动化规则</a>
     <a data-view="recycled"><span class="ico">🗑️</span>回收站</a>
     <a data-view="settings"><span class="ico">🔧</span>设置 / 备份</a>
-    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>10:36 · 设置页提醒区域排版紧凑化 + 项目下拉修复</div>
+    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>14:08 · 任务台账项目筛选修复(改ID匹配) + 设置页排版</div>
   </nav>
 
   <main class="main">
@@ -1481,7 +1481,7 @@ function renderGantt(key, ts){
 
 /* ---------- 任务台账（全部任务） ---------- */
 function renderTasks(){
-  let list=(curFilter&&curFilter!=='全部项目')? data.tasks.filter(t=>projName(t.projectId)===curFilter) : data.tasks;
+  let list=(curFilter&&curFilter!=='全部项目')? data.tasks.filter(t=>t.projectId===curFilter) : data.tasks;
   if(_search){ const q=_search.toLowerCase();
     list=list.filter(t=> (t.title||'').toLowerCase().includes(q) || (t.owner||'').toLowerCase().includes(q) || (projName(t.projectId)||'').toLowerCase().includes(q) || (DIM[t.dimension]?DIM[t.dimension].label:'-').toLowerCase().includes(q) || (t.content||'').toLowerCase().includes(q)); }
   const rows=list.slice().sort((a,b)=> (a.due||'9999').localeCompare(b.due||'9999')).map(t=>{
@@ -1500,10 +1500,10 @@ function renderTasks(){
       <td style="text-align:center;white-space:nowrap"><button class="btn ghost sm" data-open-task="${t.id}" title="完整编辑（全部字段）" style="padding:2px 8px;font-size:.82rem">✏️</button> <span class="mon-del-btn" data-delete-task="${t.id}" data-delete-title="${esc(t.title)}" title="删除此任务（可从回收站恢复）" style="cursor:pointer;padding:2px 6px;font-size:.82rem;color:#c62828">🗑️</span></td>
     </tr>`;
   }).join('');
-  const projFilter=`<select style="width:auto" onchange="curFilter=this.value;renderTasksFilter(this.value)"><option>全部项目</option>${data.projects.map(p=>`<option ${curFilter===p.name?'selected':''}>${esc(p.name)}</option>`).join('')}</select>`;
+  const projFilter=`<select style="width:auto" onchange="curFilter=this.value;renderTasksFilter(this.value)"><option value="">全部项目</option>${data.projects.map(p=>`<option value="${p.id}" ${curFilter===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>`;
   const fsBtn = (data.settings.feishu&&data.settings.feishu.syncUrl)?`<button class="btn ghost sm" onclick="feishuSync()">🔄 飞书同步</button>`:'';
   // 归档按钮（仅筛选到具体项目时显示）
-  const curProj=data.projects.find(p=>p.name===curFilter);
+  const curProj=data.projects.find(p=>p.id===curFilter);
   const archBtn=(curProj&&!curProj.archived)?`<button class="btn ghost sm" onclick="event.stopPropagation();archiveProject('${curProj.id}','${esc(curProj.name)}')" title="归档该项目（任务移入回收站，可恢复）" style="color:var(--warn);font-size:.78rem">📦 归档此项目</button>`:(curProj&&curProj.archived)?`<button class="btn ghost sm" onclick="event.stopPropagation();unarchiveProject('${curProj.id}')" title="恢复已归档项目" style="color:var(--ok);font-size:.78rem">📤 恢复项目</button>`:'';
   return `<div class="panel" style="margin-bottom:12px;background:linear-gradient(135deg,#f5f8ff,#eaf1ff);border:1px solid #d6e4ff">
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
