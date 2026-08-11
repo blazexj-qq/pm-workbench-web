@@ -87,7 +87,7 @@ body{margin:0;width:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI"
 .btn.sm{padding:6px 12px;font-size:.86rem}
 .btn.danger{background:var(--bad)}
 input,select,textarea{font-family:inherit;font-size:.96rem;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);width:100%}
-label.fld{display:block;font-size:.85rem;color:var(--sub);margin:6px 0 2px}
+label.fld{display:block;font-size:.82rem;color:var(--sub);margin:4px 0 1px}
 /* ===== 驾驶舱：工程管理风格 ===== */
 .db-top{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;margin-bottom:14px}
 .db-stat{flex:1;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:box-shadow .15s;border-left:4px solid transparent}
@@ -201,7 +201,7 @@ label.fld{display:block;font-size:.85rem;color:var(--sub);margin:6px 0 2px}
 /* 面板卡片 */
 .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 1px 2px rgba(0,0,0,.04);overflow-wrap:break-word;word-break:break-word}
 .panel h3{margin:0 0 14px;font-size:1.15rem}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media(max-width:900px){.grid2{grid-template-columns:1fr}}
 /* 表格 */
 table{width:100%;border-collapse:collapse;font-size:.92rem}
@@ -233,9 +233,9 @@ tr.row-link:hover .mon-del-btn{opacity:1}
 /* 弹窗 */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:20px 16px;z-index:50;overflow:hidden}
 .modal-bg.show{display:flex}
-.modal{background:#fff;border-radius:14px;width:min(660px,100%);padding:22px 24px;box-shadow:0 10px 40px rgba(0,0,0,.25);max-height:92vh;overflow-y:auto;display:flex;flex-direction:column}
-.modal h3{margin:0 0 10px;font-size:1.15rem}
-.modal .acts{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
+.modal{background:#fff;border-radius:14px;width:min(660px,100%);padding:16px 20px;box-shadow:0 10px 40px rgba(0,0,0,.25);max-height:92vh;overflow-y:auto;display:flex;flex-direction:column}
+.modal h3{margin:0 0 8px;font-size:1.1rem}
+.modal .acts{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
 /* AI 输出 */
 .md{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 20px;font-size:.95rem;white-space:pre-wrap;word-break:break-word}
 .md h1,.md h2,.md h3{margin:.6em 0 .3em} .md ul,.md ol{margin:.3em 0 .3em 1.2em} .md code{background:#f0f366;padding:1px 5px;border-radius:4px}
@@ -622,7 +622,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
 <body>
 <!-- 版本横幅（每次改版必更新版本号 + meta[name=app-version]） -->
 <div id="verBanner" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:6px 16px;font-size:.82rem;font-weight:600;position:relative;z-index:9999;cursor:pointer" onclick="this.style.display='none'"   title="点击关闭 · 若版本号低于 v2026-08-03-21:40 说明浏览器缓存了旧版">
-  📦 工作台版本 <b>v2026-08-11 (10:17)</b> · 表头背景色彻底修复 + 严重程度列宽对齐 · 点击关闭此条
+  📦 工作台版本 <b>v2026-08-11 (10:30)</b> · 新建任务项目匹配修复 + 弹窗布局紧凑化 · 点击关闭此条
 </div>
 <div class="layout">
   <div class="mask" id="mask" onclick="closeSide()"></div>
@@ -645,7 +645,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
     <a data-view="automation"><span class="ico">⚙️</span>自动化规则</a>
     <a data-view="recycled"><span class="ico">🗑️</span>回收站</a>
     <a data-view="settings"><span class="ico">🔧</span>设置 / 备份</a>
-    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>10:17 · 表头背景色彻底修复(覆盖全局CSS) + 严重程度列宽对齐</div>
+    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>10:30 · 新建任务项目模糊匹配 + 弹窗布局紧凑化</div>
   </nav>
 
   <main class="main">
@@ -672,13 +672,19 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
     <h3 id="taskModalT">新建任务</h3>
     <div class="warnbox" id="taskAssignHint" style="display:none"></div>
     <div class="warnbox" id="taskFeishuHint" style="display:none"></div>
-    <label class="fld">所属项目</label>
-    <div class="proj-select" id="projSelectWrap">
-      <input id="f-project" placeholder="选择已有或输入新项目名" autocomplete="off" oninput="filterProjList(this.value)" onfocus="showProjDrop()" onblur="setTimeout(hideProjDrop,150)">
-      <div class="proj-drop" id="projDrop"></div>
+    <div class="grid2">
+      <div>
+        <label class="fld">所属项目</label>
+        <div class="proj-select" id="projSelectWrap">
+          <input id="f-project" placeholder="选择或输入项目名" autocomplete="off" oninput="filterProjList(this.value)" onfocus="showProjDrop()" onblur="setTimeout(hideProjDrop,150)">
+          <div class="proj-drop" id="projDrop"></div>
+        </div>
+      </div>
+      <div>
+        <label class="fld">管控维度</label>
+        <select id="f-dim"></select>
+      </div>
     </div>
-    <label class="fld">管控维度</label>
-    <select id="f-dim"></select>
     <label class="fld">任务 / 事项标题</label>
     <input id="f-title" placeholder="如：3#楼水电预留预埋滞后跟进">
     <div class="grid2">
@@ -703,13 +709,13 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
         <input id="f-completed" type="date">
       </div>
       <div id="extraFields"></div>
-    </div>
-    <div id="progressRow">
-      <label class="fld">实际进度 %（进度维度填写）</label>
-      <input id="f-progress" type="number" min="0" max="100" placeholder="0-100">
+      <div id="progressRow">
+        <label class="fld">实际进度 %</label>
+        <input id="f-progress" type="number" min="0" max="100" placeholder="0-100" style="width:100%">
+      </div>
     </div>
     <label class="fld">备注 / 说明</label>
-    <textarea id="f-notes" rows="4" style="min-height:80px"></textarea>
+    <textarea id="f-notes" rows="3" style="min-height:60px"></textarea>
     <div class="acts">
       <button class="btn danger ghost sm" id="taskDel" onclick="deleteTask()" style="margin-right:auto">删除</button>
       <button class="btn ghost" onclick="closeModal('taskModal')">取消</button>
@@ -2037,9 +2043,9 @@ function unarchiveProject(id){
 function saveTask(){
   const d=DIM[document.getElementById('f-dim').value];
   const t = editingId? data.tasks.find(x=>x.id===editingId) : {id:uid(),createdAt:today(),reviewed:true,source:'local',feishuId:''};
-  // 项目：匹配已有则用ID，否则自动创建新项目
+  // 项目：匹配已有则用ID（模糊匹配：包含即可），否则自动创建新项目
   const projName = document.getElementById('f-project').value.trim();
-  let proj = data.projects.find(p=>p.name===projName);
+  let proj = data.projects.find(p=>p.name===projName || p.name.includes(projName) || projName.includes(p.name));
   if(!proj && projName){
     proj = {id:uid(), name:projName, status:'进行中', createdAt:today()};
     data.projects.push(proj);
