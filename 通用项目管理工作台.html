@@ -7,14 +7,14 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <!-- 版本号：每次修改必须更新此行，JS 会用它检测缓存 -->
-<meta name="app-version" content="v2026-08-11-14-20">
+<meta name="app-version" content="v2026-08-11-15-05">
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#4f46e5">
 <script>
 // ── 缓存破坏层 1：bfcache（往返缓存）检测 ──
 // Edge 关闭浏览器后重开会从内存恢复旧页面，不重新加载文件
 (function(){
-  var EXPECTED='v2026-08-11-14-20';
+  var EXPECTED='v2026-08-11-15-05';
   var meta=document.querySelector('meta[name=app-version]');
   var ACTUAL=meta?meta.getAttribute('content'):'';
   // 检测 bfcache 恢复
@@ -622,7 +622,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
 <body>
 <!-- 版本横幅（每次改版必更新版本号 + meta[name=app-version]） -->
 <div id="verBanner" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:6px 16px;font-size:.82rem;font-weight:600;position:relative;z-index:9999;cursor:pointer" onclick="this.style.display='none'"   title="点击关闭 · 若版本号低于 v2026-08-03-21:40 说明浏览器缓存了旧版">
-  📦 工作台版本 <b>v2026-08-11 (14:08)</b> · 任务台账项目筛选修复(改ID匹配) + 设置页排版 · 点击关闭此条
+  📦 工作台版本 <b>v2026-08-11 (15:05)</b> · 随手记加项目选择器(不再默认进第一个项目) · 点击关闭此条
 </div>
 <div class="layout">
   <div class="mask" id="mask" onclick="closeSide()"></div>
@@ -645,7 +645,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
     <a data-view="automation"><span class="ico">⚙️</span>自动化规则</a>
     <a data-view="recycled"><span class="ico">🗑️</span>回收站</a>
     <a data-view="settings"><span class="ico">🔧</span>设置 / 备份</a>
-    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>14:08 · 任务台账项目筛选修复(改ID匹配) + 设置页排版</div>
+    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>15:05 · 随手记加项目选择器(不再默认进第一个项目)</div>
   </nav>
 
   <main class="main">
@@ -1507,7 +1507,8 @@ function renderTasks(){
   const archBtn=(curProj&&!curProj.archived)?`<button class="btn ghost sm" onclick="event.stopPropagation();archiveProject('${curProj.id}','${esc(curProj.name)}')" title="归档该项目（任务移入回收站，可恢复）" style="color:var(--warn);font-size:.78rem">📦 归档此项目</button>`:(curProj&&curProj.archived)?`<button class="btn ghost sm" onclick="event.stopPropagation();unarchiveProject('${curProj.id}')" title="恢复已归档项目" style="color:var(--ok);font-size:.78rem">📤 恢复项目</button>`:'';
   return `<div class="panel" style="margin-bottom:12px;background:linear-gradient(135deg,#f5f8ff,#eaf1ff);border:1px solid #d6e4ff">
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <input id="quickAddInput" type="text" placeholder="💡 随手记：一句话记下任务，回车即存（例：1号楼消防管打压试验）" style="flex:1;min-width:220px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:.95rem" onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddTask();}">
+      <input id="quickAddInput" type="text" placeholder="💡 随手记：一句话记下任务，回车即存（例：1号楼消防管打压试验）" style="flex:1;min-width:180px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:.95rem" onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddTask();}">
+      <select id="quickProj" title="归属项目" style="padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;min-width:120px">${data.projects.filter(p=>!p.archived).map(p=>`<option value="${p.id}" ${(curFilter&&curFilter!=='全部项目'&&p.id===curFilter)||(!curFilter||curFilter==='全部项目')&&data.projects.filter(x=>!x.archived).indexOf(p)===0?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
       <button class="btn ghost sm" onclick="startQuickVoice()" id="btnQuickVoice" title="语音输入（中文）" style="font-size:1.2rem;padding:8px 10px">🎤</button>
       <select id="quickDim" title="归类维度" style="padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff">${DIMENSIONS.map(d=>'<option value="'+d.key+'">'+d.icon+' '+d.label+'</option>').join('')}</select>
       <button class="btn" style="background:var(--accent);color:#fff;white-space:nowrap" onclick="quickAddTask()">＋ 记一笔</button>
@@ -2083,8 +2084,11 @@ function toast(msg){
   clearTimeout(t._timer); t._timer=setTimeout(function(){t.style.opacity='0';},1800);
 }
 function showToast(m){ toast(m); }
-function _newTask(title, dim, status){
-  const pid = data.projects.length? data.projects[0].id : '';
+function _newTask(title, dim, status, pid){
+  if(!pid){
+    // 优先用当前筛选的项目；没有则取第一个非归档项目
+    pid = (curFilter&&curFilter!=='全部项目')? curFilter : (data.projects.find(p=>!p.archived)||{}).id || '';
+  }
   data.tasks.push({
     id:uid(), projectId:pid, dimension:dim, title:title,
     status:status||((DIM[dim]&&DIM[dim].statusOpts&&DIM[dim].statusOpts[0])||'进行中'),
@@ -2099,7 +2103,9 @@ function quickAddTask(){
   const title=inp.value.trim();
   if(!title){ inp.focus(); toast('先写点什么再记～'); return; }
   const dim=document.getElementById('quickDim')?document.getElementById('quickDim').value:'progress';
-  _newTask(title, dim);
+  const projSel=document.getElementById('quickProj');
+  const pid=projSel?projSel.value:'';
+  _newTask(title, dim, null, pid);
   inp.value='';
   toast('已记录 ✓ 点列表行可补全细节');
   const n=document.getElementById('quickAddInput'); if(n) n.focus();
