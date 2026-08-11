@@ -7,14 +7,14 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <!-- 版本号：每次修改必须更新此行，JS 会用它检测缓存 -->
-<meta name="app-version" content="v2026-08-11-15-05">
+<meta name="app-version" content="v2026-08-11-15-30">
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#4f46e5">
 <script>
 // ── 缓存破坏层 1：bfcache（往返缓存）检测 ──
 // Edge 关闭浏览器后重开会从内存恢复旧页面，不重新加载文件
 (function(){
-  var EXPECTED='v2026-08-11-15-05';
+  var EXPECTED='v2026-08-11-15-30';
   var meta=document.querySelector('meta[name=app-version]');
   var ACTUAL=meta?meta.getAttribute('content'):'';
   // 检测 bfcache 恢复
@@ -622,7 +622,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
 <body>
 <!-- 版本横幅（每次改版必更新版本号 + meta[name=app-version]） -->
 <div id="verBanner" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:6px 16px;font-size:.82rem;font-weight:600;position:relative;z-index:9999;cursor:pointer" onclick="this.style.display='none'"   title="点击关闭 · 若版本号低于 v2026-08-03-21:40 说明浏览器缓存了旧版">
-  📦 工作台版本 <b>v2026-08-11 (15:05)</b> · 随手记加项目选择器(不再默认进第一个项目) · 点击关闭此条
+  📦 工作台版本 <b>v2026-08-11 (15:30)</b> · 话筒紧凑+归档项目全显示+AI拆解导入修复(事件委托) · 点击关闭此条
 </div>
 <div class="layout">
   <div class="mask" id="mask" onclick="closeSide()"></div>
@@ -645,7 +645,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
     <a data-view="automation"><span class="ico">⚙️</span>自动化规则</a>
     <a data-view="recycled"><span class="ico">🗑️</span>回收站</a>
     <a data-view="settings"><span class="ico">🔧</span>设置 / 备份</a>
-    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>15:05 · 随手记加项目选择器(不再默认进第一个项目)</div>
+    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>15:30 · 话筒紧凑+归档项目全显示+AI拆解导入修复</div>
   </nav>
 
   <main class="main">
@@ -1509,7 +1509,7 @@ function renderTasks(){
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <input id="quickAddInput" type="text" placeholder="💡 随手记：一句话记下任务，回车即存（例：1号楼消防管打压试验）" style="flex:1;min-width:180px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:.95rem" onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddTask();}">
       <select id="quickProj" title="归属项目" style="padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;min-width:120px">${data.projects.filter(p=>!p.archived).map(p=>`<option value="${p.id}" ${(curFilter&&curFilter!=='全部项目'&&p.id===curFilter)||(!curFilter||curFilter==='全部项目')&&data.projects.filter(x=>!x.archived).indexOf(p)===0?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
-      <button class="btn ghost sm" onclick="startQuickVoice()" id="btnQuickVoice" title="语音输入（中文）" style="font-size:1.2rem;padding:8px 10px">🎤</button>
+      <button class="btn ghost sm" onclick="startQuickVoice()" id="btnQuickVoice" title="语音输入（中文）" style="font-size:.95rem;padding:4px 6px;line-height:1">🎤</button>
       <select id="quickDim" title="归类维度" style="padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff">${DIMENSIONS.map(d=>'<option value="'+d.key+'">'+d.icon+' '+d.label+'</option>').join('')}</select>
       <button class="btn" style="background:var(--accent);color:#fff;white-space:nowrap" onclick="quickAddTask()">＋ 记一笔</button>
     </div>
@@ -1786,7 +1786,8 @@ function impParse(){
     ${_impTasks.slice(0,50).map(t=>`<tr><td>${esc(projName(t.projectId))}</td><td>${DIM[t.dimension]?DIM[t.dimension].label:'-'}</td><td>${esc(t.title)}</td><td>${esc(t.status)}</td><td>${esc(t.owner)}</td></tr>`).join('')}
     </tbody></table>${_impTasks.length>50?'<div class="muted">…仅显示前 50 条</div>':''}</div>`;
   document.getElementById('impPreview').innerHTML=prev;
-  document.getElementById('genModalActs').innerHTML=`<button class="btn ghost" onclick="closeModal('genModal')">取消</button><button class="btn" style="background:var(--ok);color:#fff" onclick="impConfirm()">✅ 确认导入 ${_impTasks.length} 条</button>`;
+  document.getElementById('genModalActs').innerHTML=`<button class="btn ghost" data-gen-act="0">取消</button><button class="btn" style="background:var(--ok);color:#fff" data-gen-act="1">✅ 确认导入 ${_impTasks.length} 条</button>`;
+  _genActs=[{fn:()=>closeModal('genModal')},{fn:()=>impConfirm()}];
 }
 function impConfirm(){
   if(!_impTasks.length) return;
@@ -2331,7 +2332,7 @@ function importTasks(arr){
     data.tasks.push({id:uid(),projectId:p.id,dimension:dimKey,title:t.title||'(未命名)',status:(DIM[dimKey]&&DIM[dimKey].statusOpts[0])||'未开始',owner:t.owner||'',due:t.due||'',priority:t.priority||'中',reviewed:false,notes:t.notes||'',createdAt:today(),updatedAt:today()});
     n++;
   });
-  save(); render(); alert('已导入 '+n+' 条（待复核）');
+  save(); render(); toast('已导入 '+n+' 条任务（待复核）✓');
 }
 /* ---------- [7b] 文档解析库（按需懒加载，保持单文件离线可用） ---------- */
 const _libs={};
@@ -3545,7 +3546,7 @@ function renderNotes(){
         ${!isArchived?`<div class="todo-archive-picker" id="archive-picker-${t.id}" style="display:none;margin-top:8px;padding:10px;background:#f8f9fa;border:1px solid #e0e0e0;border-radius:8px;font-size:.85rem">
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
             <label class="muted" style="font-size:.82rem;white-space:nowrap">项目：</label>
-            <select id="arch-proj-${t.id}" style="padding:4px 8px;border-radius:6px;border:1px solid #ccc;font-size:.85rem">${activeProjects().map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>
+            <select id="arch-proj-${t.id}" style="padding:4px 8px;border-radius:6px;border:1px solid #ccc;font-size:.85rem">${data.projects.filter(p=>!p.archived).map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>
             <label class="muted" style="font-size:.82rem;white-space:nowrap">维度：</label>
             <select id="arch-dim-${t.id}" style="padding:4px 8px;border-radius:6px;border:1px solid #ccc;font-size:.85rem">${DIMENSIONS.map(d=>`<option value="${d.key}">${d.icon} ${d.label}</option>`).join('')}</select>
           </div>
@@ -3738,7 +3739,7 @@ function confirmArchiveTodo(noteId, todoId){
   const projectId=projEl.value;
   const dimension=dimEl.value;
   if(!projectId||!dimension){alert('请先选择项目和维度');return;}
-  const proj=activeProjects().find(p=>p.id===projectId);
+  const proj=data.projects.find(p=>p.id===projectId);
   const dim=DIM[dimension];
   // 创建正式任务
   const task={
@@ -4115,11 +4116,12 @@ function automationHits(){
 /* ---------- 通用工具 ---------- */
 function showModal(id){document.getElementById(id).classList.add('show');}
 function closeModal(id){document.getElementById(id).classList.remove('show');}
+let _genActs=[]; // showGen 事件委托：存当前弹窗按钮回调
 function showGen(title,body,acts){
   document.getElementById('genModalT').textContent=title;
   document.getElementById('genModalBody').innerHTML=body;
-  document.getElementById('genModalActs').innerHTML = acts.map((a,i)=>`<button class="${a.cls||'btn ghost'}" id="ga${i}">${a.t}</button>`).join('');
-  acts.forEach((a,i)=>{const el=document.getElementById('ga'+i); if(el&&a.fn) el.onclick=a.fn;});
+  _genActs=acts||[];
+  document.getElementById('genModalActs').innerHTML = _genActs.map((a,i)=>`<button class="${a.cls||'btn ghost'}" data-gen-act="${i}">${a.t}</button>`).join('');
   showModal('genModal');
 }
 function reportIdx(id){ return (data.reports||[]).findIndex(x=>x.id===id); }
@@ -4861,6 +4863,11 @@ function renderMilestoneStrip(){
     var dp=e.target.closest('[data-del-proj]');
     if(dp){ e.preventDefault(); e.stopPropagation();
       delProj(dp.getAttribute('data-del-proj'),dp.getAttribute('data-del-proj-name')); return; }
+    // 通用弹窗按钮（showGen 生成的事件委托按钮）
+    var ga=e.target.closest('[data-gen-act]');
+    if(ga){ e.preventDefault(); e.stopPropagation();
+      var idx=+ga.getAttribute('data-gen-act');
+      if(_genActs[idx]&&_genActs[idx].fn) _genActs[idx].fn(); return; }
   });
   // 回收站：checkbox 变化时同步按钮状态
   document.addEventListener('change',function(e){
