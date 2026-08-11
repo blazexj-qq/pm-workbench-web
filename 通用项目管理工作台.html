@@ -7,14 +7,14 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <!-- 版本号：每次修改必须更新此行，JS 会用它检测缓存 -->
-<meta name="app-version" content="v2026-08-11-15-20">
+<meta name="app-version" content="v2026-08-11-15-40">
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#4f46e5">
 <script>
 // ── 缓存破坏层 1：bfcache（往返缓存）检测 ──
 // Edge 关闭浏览器后重开会从内存恢复旧页面，不重新加载文件
 (function(){
-  var EXPECTED='v2026-08-11-15-20';
+  var EXPECTED='v2026-08-11-15-40';
   var meta=document.querySelector('meta[name=app-version]');
   var ACTUAL=meta?meta.getAttribute('content'):'';
   // 检测 bfcache 恢复
@@ -622,7 +622,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
 <body>
 <!-- 版本横幅（每次改版必更新版本号 + meta[name=app-version]） -->
 <div id="verBanner" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:6px 16px;font-size:.82rem;font-weight:600;position:relative;z-index:9999;cursor:pointer" onclick="this.style.display='none'"   title="点击关闭 · 若版本号低于 v2026-08-03-21:40 说明浏览器缓存了旧版">
-  📦 工作台版本 <b>v2026-08-11 (15:20)</b> · AI拆解导入修复+加固 · 点击关闭此条
+  📦 工作台版本 <b>v2026-08-11 (15:40)</b> · AI拆解按钮改直接绑定+三重保险 · 点击关闭此条
 </div>
 <div class="layout">
   <div class="mask" id="mask" onclick="closeSide()"></div>
@@ -645,7 +645,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
     <a data-view="automation"><span class="ico">⚙️</span>自动化规则</a>
     <a data-view="recycled"><span class="ico">🗑️</span>回收站</a>
     <a data-view="settings"><span class="ico">🔧</span>设置 / 备份</a>
-    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>15:20 · AI拆解导入修复+加固</div>
+    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>15:40 · AI拆解按钮改直接绑定+三重保险</div>
   </nav>
 
   <main class="main">
@@ -1786,8 +1786,16 @@ function impParse(){
     ${_impTasks.slice(0,50).map(t=>`<tr><td>${esc(projName(t.projectId))}</td><td>${DIM[t.dimension]?DIM[t.dimension].label:'-'}</td><td>${esc(t.title)}</td><td>${esc(t.status)}</td><td>${esc(t.owner)}</td></tr>`).join('')}
     </tbody></table>${_impTasks.length>50?'<div class="muted">…仅显示前 50 条</div>':''}</div>`;
   document.getElementById('impPreview').innerHTML=prev;
-  document.getElementById('genModalActs').innerHTML=`<button class="btn ghost" data-gen-act="0">取消</button><button class="btn" style="background:var(--ok);color:#fff" data-gen-act="1">✅ 确认导入 ${_impTasks.length} 条</button>`;
-  _genActs=[{fn:()=>closeModal('genModal')},{fn:()=>impConfirm()}];
+  // 不调 showGen（会覆盖 impPreview），手动用 showGen 同款 addEventListener + el.onclick 双保险
+  const _acts=[
+    {t:'取消',cls:'btn ghost', fn:()=>closeModal('genModal')},
+    {t:'✅ 确认导入 '+_impTasks.length+' 条',cls:'btn',fn:()=>impConfirm()}
+  ];
+  const _actEl=document.getElementById('genModalActs');
+  _actEl.innerHTML=_acts.map((a,i)=>`<button class="${a.cls}" data-gen-act="${i}">${a.t}</button>`).join('');
+  _actEl.querySelectorAll('[data-gen-act]').forEach((btn,i)=>{
+    btn.addEventListener('click',function(){ if(_acts[i]&&_acts[i].fn) _acts[i].fn(); });
+  });
 }
 function impConfirm(){
   if(!_impTasks.length) return;
@@ -4126,12 +4134,17 @@ function automationHits(){
 /* ---------- 通用工具 ---------- */
 function showModal(id){document.getElementById(id).classList.add('show');}
 function closeModal(id){document.getElementById(id).classList.remove('show');}
-let _genActs=[]; // showGen 事件委托：存当前弹窗按钮回调
+let _genActs=[]; // showGen 弹窗按钮回调（直接 addEventListener 绑定，最可靠）
 function showGen(title,body,acts){
   document.getElementById('genModalT').textContent=title;
   document.getElementById('genModalBody').innerHTML=body;
   _genActs=acts||[];
-  document.getElementById('genModalActs').innerHTML = _genActs.map((a,i)=>`<button class="${a.cls||'btn ghost'}" data-gen-act="${i}">${a.t}</button>`).join('');
+  const actEl=document.getElementById('genModalActs');
+  actEl.innerHTML = _genActs.map((a,i)=>`<button class="${a.cls||'btn ghost'}" data-gen-act="${i}">${a.t}</button>`).join('');
+  // 直接给每个按钮 addEventListener（最可靠的 JS 绑定方式；不走事件委托，避免在 Edge/file:// 弹窗里偶尔无响应）
+  actEl.querySelectorAll('[data-gen-act]').forEach((btn,i)=>{
+    btn.addEventListener('click',function(){ if(_genActs[i]&&_genActs[i].fn) _genActs[i].fn(); });
+  });
   showModal('genModal');
 }
 function reportIdx(id){ return (data.reports||[]).findIndex(x=>x.id===id); }
@@ -4873,11 +4886,7 @@ function renderMilestoneStrip(){
     var dp=e.target.closest('[data-del-proj]');
     if(dp){ e.preventDefault(); e.stopPropagation();
       delProj(dp.getAttribute('data-del-proj'),dp.getAttribute('data-del-proj-name')); return; }
-    // 通用弹窗按钮（showGen 生成的事件委托按钮）
-    var ga=e.target.closest('[data-gen-act]');
-    if(ga){ e.preventDefault(); e.stopPropagation();
-      var idx=+ga.getAttribute('data-gen-act');
-      if(_genActs[idx]&&_genActs[idx].fn) _genActs[idx].fn(); return; }
+    // 通用弹窗按钮 [data-gen-act] 由 showGen 直接 addEventListener 绑定，不走这里（避免重复触发）
   });
   // 回收站：checkbox 变化时同步按钮状态
   document.addEventListener('change',function(e){
