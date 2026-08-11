@@ -169,6 +169,10 @@ label.fld{display:block;font-size:.85rem;color:var(--sub);margin:6px 0 2px}
 .todo-move{display:inline-flex;flex-direction:column;gap:0;margin-left:2px}
 .todo-mv{width:20px;height:15px;line-height:13px;text-align:center;font-size:.6rem;color:#64748b;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;cursor:pointer;padding:0;transition:all .15s}
 .todo-mv:hover:not(:disabled){background:#e2e8f0;color:var(--accent)}
+.todo-archive-btn{color:var(--accent);cursor:pointer;font-size:.82rem;padding:2px 8px;border-radius:4px;transition:all .15s;font-weight:600;white-space:nowrap}
+.todo-archive-btn:hover{background:#e8f0fe;color:#1a56db}
+.todo-card.archived-card{border-left:4px solid #8b5cf6;background:#faf5ff}
+.todo-card.archived-card .todo-text{color:#6b21a8;font-weight:500}
 .todo-mv:disabled{opacity:.3;cursor:not-allowed}
 .todo-status-sel{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2364748b'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center;background-size:10px;padding-right:22px;min-width:100px;max-width:130px;white-space:nowrap}
 .notes-archive-toggle{font-size:.82rem;color:var(--accent);cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin:8px 0}
@@ -618,7 +622,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
 <body>
 <!-- 版本横幅（每次改版必更新版本号 + meta[name=app-version]） -->
 <div id="verBanner" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:6px 16px;font-size:.82rem;font-weight:600;position:relative;z-index:9999;cursor:pointer" onclick="this.style.display='none'"   title="点击关闭 · 若版本号低于 v2026-08-03-21:40 说明浏览器缓存了旧版">
-  📦 工作台版本 <b>v2026-08-11 (09:42)</b> · 批量删除只弹一次确认 + 工具栏一行 + 项目下拉 · 点击关闭此条
+  📦 工作台版本 <b>v2026-08-11 (09:50)</b> · 待办归档到任务台账 + 批量删除优化 + 工具栏一行 · 点击关闭此条
 </div>
 <div class="layout">
   <div class="mask" id="mask" onclick="closeSide()"></div>
@@ -641,7 +645,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
     <a data-view="automation"><span class="ico">⚙️</span>自动化规则</a>
     <a data-view="recycled"><span class="ico">🗑️</span>回收站</a>
     <a data-view="settings"><span class="ico">🔧</span>设置 / 备份</a>
-    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>09:42 · 批量删除只弹一次确认 + 工具栏一行</div>
+    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>09:50 · 待办归档到任务台账 + 批量删除优化</div>
   </nav>
 
   <main class="main">
@@ -3496,11 +3500,12 @@ function renderNotes(){
   function todoHtml(t){
     const isDone=t.status==='done';
     const isDelayed=t.status==='delayed';
+    const isArchived=t.archived===true;
     const idx=note.todos.findIndex(x=>x.id===t.id);
     const atTop=idx<=0, atBottom=idx>=note.todos.length-1;
     return `
-    <div class="todo-card ${isDone?'done-card':''}" id="todo-${t.id}">
-      <select class="todo-status-sel" onchange="changeTodoStatus('${note.id}','${t.id}',this.value)" style="padding:3px 6px;border-radius:6px;border:2px solid ${isDone?'var(--ok)':isDelayed?'var(--bad)':'var(--warn)'};font-size:.82rem;font-weight:600;cursor:pointer;background:#fff;flex-shrink:0;margin-top:1px">
+    <div class="todo-card ${isDone?'done-card':''} ${isArchived?'archived-card':''}" id="todo-${t.id}">
+      <select class="todo-status-sel" onchange="changeTodoStatus('${note.id}','${t.id}',this.value)" style="padding:3px 6px;border-radius:6px;border:2px solid ${isDone?'var(--ok)':isDelayed?'var(--bad)':isArchived?'#8b5cf6':'var(--warn)'};font-size:.82rem;font-weight:600;cursor:pointer;background:#fff;flex-shrink:0;margin-top:1px">
         <option value="pending" ${t.status==='pending'?'selected':''}>⏳ 未完成</option>
         <option value="done" ${t.status==='done'?'selected':''}>✅ 已完成</option>
         <option value="delayed" ${t.status==='delayed'?'selected':''}>⚠️ 延期办理</option>
@@ -3510,12 +3515,26 @@ function renderNotes(){
         <div class="todo-meta">
           ${isDelayed?`<input class="todo-delay-input" placeholder="延期原因..." value="${esc(t.delayReason||'')}" onchange="updateTodoDelay('${note.id}','${t.id}',this.value)">`:''}
           ${isDone?`<span class="muted" style="font-size:.78rem">${t.doneAt||''}</span>`:''}
+          ${isArchived?`<span class="muted" style="font-size:.78rem;color:#8b5cf6;font-weight:600">📥 已归档 → ${esc(t.archivedToDimLabel||'')}</span>`:''}
           <span class="todo-move">
             <button class="todo-mv" title="上移" ${atTop?'disabled':''} onclick="moveTodo('${note.id}','${t.id}','up')">▲</button>
             <button class="todo-mv" title="下移" ${atBottom?'disabled':''} onclick="moveTodo('${note.id}','${t.id}','down')">▼</button>
           </span>
+          ${!isArchived?`<span class="todo-archive-btn" data-todo-archive="${t.id}" data-note-id="${note.id}" title="归档到任务台账（选项目+维度后确认）">📥 归档</span>`:''}
           <span class="todo-del" onclick="deleteTodo('${note.id}','${t.id}')">✕ 删除</span>
         </div>
+        ${!isArchived?`<div class="todo-archive-picker" id="archive-picker-${t.id}" style="display:none;margin-top:8px;padding:10px;background:#f8f9fa;border:1px solid #e0e0e0;border-radius:8px;font-size:.85rem">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+            <label class="muted" style="font-size:.82rem;white-space:nowrap">项目：</label>
+            <select id="arch-proj-${t.id}" style="padding:4px 8px;border-radius:6px;border:1px solid #ccc;font-size:.85rem">${activeProjects().map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>
+            <label class="muted" style="font-size:.82rem;white-space:nowrap">维度：</label>
+            <select id="arch-dim-${t.id}" style="padding:4px 8px;border-radius:6px;border:1px solid #ccc;font-size:.85rem">${DIMENSIONS.map(d=>`<option value="${d.key}">${d.icon} ${d.label}</option>`).join('')}</select>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn sm" style="background:var(--accent);color:#fff" onclick="confirmArchiveTodo('${note.id}','${t.id}')">✓ 确认归档</button>
+            <button class="btn ghost sm" onclick="document.getElementById('archive-picker-${t.id}').style.display='none'">取消</button>
+          </div>
+        </div>`:''}
       </div>
     </div>`;
   }
@@ -3688,6 +3707,49 @@ ${_content}`;
     alert('AI 生成失败：'+(err.message||'未知错误'));
     if(btn){btn.disabled=false;btn.textContent='🤖 AI 总结';}
   });
+}
+
+/* ---------- 待办归档到任务台账 ---------- */
+function confirmArchiveTodo(noteId, todoId){
+  const note=data.notes.find(n=>n.id===noteId); if(!note)return;
+  const todo=note.todos.find(t=>t.id===todoId); if(!todo)return;
+  const projEl=document.getElementById('arch-proj-'+todoId);
+  const dimEl=document.getElementById('arch-dim-'+todoId);
+  if(!projEl||!dimEl){alert('选择框未找到');return;}
+  const projectId=projEl.value;
+  const dimension=dimEl.value;
+  if(!projectId||!dimension){alert('请先选择项目和维度');return;}
+  const proj=activeProjects().find(p=>p.id===projectId);
+  const dim=DIM[dimension];
+  // 创建正式任务
+  const task={
+    id:uid(),
+    projectId:projectId,
+    dimension:dimension,
+    title:todo.text,
+    status:(dim&&dim.statusOpts&&dim.statusOpts.length)?dim.statusOpts[0]:'未开始',
+    owner:'',
+    due:'',
+    priority:'中',
+    reviewed:false,
+    notes:'📥 来自 '+note.date+' 工作笔记待办',
+    createdAt:today(),
+    updatedAt:today()
+  };
+  data.tasks.push(task);
+  // 标记待办为已归档
+  todo.archived=true;
+  todo.archivedAt=nowStr();
+  todo.archivedToDimLabel=(dim?dim.label:dimension);
+  todo.archivedToProjName=(proj?proj.name:projectId);
+  save();
+  render();
+  showToast('已归档「'+todo.text+'」→ '+(proj?proj.name:'')+' · '+(dim?dim.label:dimension)+' 维度');
+}
+
+function toggleTodoArchivePicker(todoId){
+  var picker=document.getElementById('archive-picker-'+todoId);
+  if(picker) picker.style.display=picker.style.display==='none'?'block':'none';
 }
 
 // 笔记导出
@@ -4765,6 +4827,12 @@ function renderMilestoneStrip(){
     // 回收站：批量操作按钮
     if(e.target.id==='batchRestoreBtn'){ e.preventDefault(); batchRestoreSelected(); return; }
     if(e.target.id==='batchPurgeBtn'){ e.preventDefault(); batchPurgeSelected(); return; }
+    // 待办事项：归档到任务台账（展开/收起选择器）
+    var ta=e.target.closest('[data-todo-archive]');
+    if(ta){ e.preventDefault(); e.stopPropagation();
+      var tid=ta.getAttribute('data-todo-archive');
+      toggleTodoArchivePicker(tid); return;
+    }
   });
   // 回收站：checkbox 变化时同步按钮状态
   document.addEventListener('change',function(e){
