@@ -618,7 +618,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
 <body>
 <!-- 版本横幅（每次改版必更新版本号 + meta[name=app-version]） -->
 <div id="verBanner" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:6px 16px;font-size:.82rem;font-weight:600;position:relative;z-index:9999;cursor:pointer" onclick="this.style.display='none'"   title="点击关闭 · 若版本号低于 v2026-08-03-21:40 说明浏览器缓存了旧版">
-  📦 工作台版本 <b>v2026-08-10 (11:45)</b> · 修复进度监控空数据(残留筛选) + 归档按钮文案优化 · 点击关闭此条
+  📦 工作台版本 <b>v2026-08-11 (08:55)</b> · 回收站批量操作 + AI总结修复 · 点击关闭此条
 </div>
 <div class="layout">
   <div class="mask" id="mask" onclick="closeSide()"></div>
@@ -641,7 +641,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
     <a data-view="automation"><span class="ico">⚙️</span>自动化规则</a>
     <a data-view="recycled"><span class="ico">🗑️</span>回收站</a>
     <a data-view="settings"><span class="ico">🔧</span>设置 / 备份</a>
-    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-10<br>11:45 · 修复进度监控空数据(残留筛选) + 归档按钮文案优化</div>
+    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>08:55 · 回收站批量操作 + AI总结修复(读输入框)</div>
   </nav>
 
   <main class="main">
@@ -3634,7 +3634,12 @@ function clearNoteContent(dateStr){
 
 function aiGenerateSummary(dateStr){
   const note=getOrCreateNote(dateStr);
-  if(!note.content.trim()){alert('请先写一些笔记内容再让 AI 生成');return;}
+  // 🔧 优先读输入框当前内容（用户可能已输入但未保存），其次读已保存数据
+  var _txt=document.getElementById('noteContent');
+  var _content=(_txt&&_txt.value.trim())||note.content||'';
+  if(!_content){alert('请先写一些笔记内容再让 AI 生成');return;}
+  // 如果输入框有新内容但还没保存，自动先保存
+  if(_txt&&_txt.value.trim()&&!note.content){ note.content=_txt.value.trim(); save(); }
   const cfg=data.settings.ai||{};
   if(!cfg.workerUrl&&!cfg.apiKey){alert('请先配置 AI（设置 → AI 配置）');navigateTo('settings');return;}
 
@@ -3646,7 +3651,7 @@ function aiGenerateSummary(dateStr){
 第二部分「待办事项」：从笔记中提取需要跟进的事项，每条一行，格式：- [事项内容]。只提取确实需要后续行动的事项，不要把已完成的事也列出来。
 
 工作笔记：
-${note.content}`;
+${_content}`;
 
   // 调用AI
   const payload={messages:[{role:'user',content:prompt}],model:(cfg.model||'qwen-plus'),temperature:0.3, max_tokens:1500};
@@ -4056,7 +4061,7 @@ function deleteReport(id){
   data.reports.splice(i,1); save(); render();
   showToast('已删除报告，可到「回收站」恢复');
 }
-/* ---------- [12] 回收站 ---------- */
+/* ---------- [12] 回收站（支持批量选择/恢复/彻底删除） ---------- */
 function renderRecycled(){
   const list=data.recycled||[];
   if(!list.length) return `<div class="panel"><h3>🗑️ 回收站</h3><div class="muted" style="padding:20px;text-align:center">回收站是空的。删除的任务 / 报告 / 归档的项目会先到这里，可随时恢复，避免误删丢失。</div></div>`;
@@ -4076,21 +4081,28 @@ function renderRecycled(){
       sub = (x.at||'');
       typeTag = '<span class="tag" style="background:#eee">报告</span>';
     }
-    return `<tr>
+    return `<tr data-rec-idx="${idx}">
+      <td><input type="checkbox" class="rec-cb" data-rec-idx="${idx}"></td>
       <td>${typeTag}</td>
       <td><b>${esc(title)}</b></td>
       <td class="muted" style="font-size:.82rem">${esc(sub)}</td>
       <td class="muted" style="font-size:.82rem">${esc(it.deletedAt||it.archivedAt||'')}</td>
       <td>
-        <button class="btn ghost sm" onclick="restoreFromRecycled(${idx})">♻️ 恢复</button>
-        <button class="btn danger ghost sm" onclick="purgeRecycled(${idx})">🗑 彻底删除</button>
+        <button class="btn ghost sm" data-restore-idx="${idx}" title="恢复到原处">♻️ 恢复</button>
+        <button class="btn danger ghost sm" data-purge-idx="${idx}" title="永久删除，不可恢复">🗑 彻底删除</button>
       </td>
     </tr>`;
   };
   return `<div class="panel"><h3>🗑️ 回收站（${list.length}）</h3>
     <div class="note">这里存放你删除的任务 / 报告 / 归档的项目。点「恢复」放回原处；点「彻底删除」将永久清除、不可恢复。</div>
-    <div class="tools" style="margin-bottom:8px"><button class="btn ghost sm" onclick="purgeAllRecycled()">🧹 清空回收站</button></div>
-    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px"><table style="min-width:520px"><thead><tr><th>类型</th><th>名称</th><th>信息</th><th>时间</th><th style="width:150px;text-align:center">操作</th></tr></thead><tbody>
+    <div class="tools" style="margin-bottom:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <label style="font-size:.82rem;display:inline-flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="recSelectAll" checked> 全选</label>
+      <button class="btn sm" id="batchRestoreBtn" style="background:var(--ok);color:#fff" disabled>♻️ 批量恢复选中（0）</button>
+      <button class="btn danger sm" id="batchPurgeBtn" disabled>🗑 批量彻底删除（0）</button>
+      <button class="btn ghost sm" onclick="purgeAllRecycled()">🧹 清空回收站</button>
+      <span class="muted" style="margin-left:auto;font-size:.78rem">💡 勾选左侧复选框后可批量操作</span>
+    </div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px"><table style="min-width:580px"><thead><tr><th style="width:36px;text-align:center"><input type="checkbox" id="recHeadCb"></th><th>类型</th><th>名称</th><th>信息</th><th>时间</th><th style="width:150px;text-align:center">操作</th></tr></thead><tbody>
       ${list.map(row).join('')}
     </tbody></table></div></div>`;
 }
@@ -4124,6 +4136,43 @@ function purgeAllRecycled(){
     data.projects=data.projects.filter(p=>p.id!==it.item.id);
   });
   data.recycled=[]; save(); render();
+}
+
+/* ---------- 回收站批量操作 ---------- */
+function _getSelectedRecIdxs(){
+  var cbs=document.querySelectorAll('.rec-cb:checked');
+  return Array.prototype.map.call(cbs,function(cb){return parseInt(cb.getAttribute('data-rec-idx'));}).filter(function(n){return!isNaN(n);});
+}
+function _syncRecBatchBtns(){
+  var idxs=_getSelectedRecIdxs();
+  var br=document.getElementById('batchRestoreBtn');
+  var bp=document.getElementById('batchPurgeBtn');
+  if(br){br.disabled=idxs.length===0;br.textContent='♻️ 批量恢复选中（'+idxs.length+'）';}
+  if(bp){bp.disabled=idxs.length===0;bp.textContent='🗑 批量彻底删除（'+idxs.length+'）';}
+  // 同步全选框状态
+  var allCb=document.getElementById('recSelectAll');
+  var headCb=document.getElementById('recHeadCb');
+  var total=document.querySelectorAll('.rec-cb').length;
+  var checked=idxs.length;
+  if(allCb)allCb.indeterminate=(checked>0&&checked<total);allCb&&(allCb.checked=checked>0&&checked===total);
+  if(headCb)headCb.indeterminate=(checked>0&&checked<total);headCb&&(headCb.checked=checked>0&&checked===total);
+}
+function batchRestoreSelected(){
+  var idxs=_getSelectedRecIdxs();
+  if(!idxs.length)return;
+  if(!confirm('确定恢复选中的 '+idxs.length+' 项？'))return;
+  // 从大到小删，避免索引漂移
+  idxs.sort(function(a,b){return b-a;});
+  idxs.forEach(function(idx){restoreFromRecycled(idx);});
+  showToast('已批量恢复 '+idxs.length+' 项');
+}
+function batchPurgeSelected(){
+  var idxs=_getSelectedRecIdxs();
+  if(!idxs.length)return;
+  if(!confirm('⚠️ 彻底删除选中的 '+idxs.length+' 项？此操作不可恢复！'))return;
+  idxs.sort(function(a,b){return b-a;});
+  idxs.forEach(function(idx){purgeRecycled(idx);});
+  showToast('已彻底删除 '+idxs.length+' 项');
 }
 function archiveReport(id){
   const i=reportIdx(id); if(i<0)return;
@@ -4697,7 +4746,7 @@ function renderMilestoneStrip(){
 
   // ── 统一用「事件委托」：innerHTML 动态注入的 onclick 在 Edge/file:// 下不可靠，
   //    改为在 document 上监听一次，按钮用 data-* 标记，
-  //    覆盖任务台账、监控视图、弹窗内所有动态按钮，且只绑定一次不会重复触发 ──
+  //    覆盖任务台账、监控视图、弹窗、回收站所有动态按钮，且只绑定一次不会重复触发 ──
   document.addEventListener('click',function(e){
     var mb=e.target.closest('[data-mark-review]');
     if(mb){ e.preventDefault(); e.stopPropagation(); markReviewed(mb.getAttribute('data-mark-review')); return; }
@@ -4710,6 +4759,25 @@ function renderMilestoneStrip(){
     if(dt){ e.preventDefault(); e.stopPropagation();
       var did=dt.getAttribute('data-delete-task'), dtitle=dt.getAttribute('data-delete-title')||'该任务';
       if(confirm('确定删除「'+dtitle+'」？')){ deleteTask(did); render(); } return; }
+    // 回收站：单条恢复/彻底删除
+    var rt=e.target.closest('[data-restore-idx]');
+    if(rt){ e.preventDefault(); e.stopPropagation(); restoreFromRecycled(parseInt(rt.getAttribute('data-restore-idx'))); return; }
+    var pt=e.target.closest('[data-purge-idx]');
+    if(pt){ e.preventDefault(); e.stopPropagation(); purgeRecycled(parseInt(pt.getAttribute('data-purge-idx'))); return; }
+    // 回收站：批量操作按钮
+    if(e.target.id==='batchRestoreBtn'){ e.preventDefault(); batchRestoreSelected(); return; }
+    if(e.target.id==='batchPurgeBtn'){ e.preventDefault(); batchPurgeSelected(); return; }
+  });
+  // 回收站：checkbox 变化时同步按钮状态
+  document.addEventListener('change',function(e){
+    if(e.target.classList.contains('rec-cb')||e.target.id==='recSelectAll'||e.target.id==='recHeadCb'){
+      // 全选逻辑
+      if(e.target.id==='recSelectAll'||e.target.id==='recHeadCb'){
+        var cbs=document.querySelectorAll('.rec-cb');
+        for(var i=0;i<cbs.length;i++)cbs[i].checked=e.target.checked;
+      }
+      _syncRecBatchBtns();
+    }
   });
 
   buildDimNav();
