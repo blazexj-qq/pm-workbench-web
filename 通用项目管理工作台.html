@@ -7,14 +7,14 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <!-- 版本号：每次修改必须更新此行，JS 会用它检测缓存 -->
-<meta name="app-version" content="v2026-08-11-15-30">
+<meta name="app-version" content="v2026-08-11-15-20">
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#4f46e5">
 <script>
 // ── 缓存破坏层 1：bfcache（往返缓存）检测 ──
 // Edge 关闭浏览器后重开会从内存恢复旧页面，不重新加载文件
 (function(){
-  var EXPECTED='v2026-08-11-15-30';
+  var EXPECTED='v2026-08-11-15-20';
   var meta=document.querySelector('meta[name=app-version]');
   var ACTUAL=meta?meta.getAttribute('content'):'';
   // 检测 bfcache 恢复
@@ -622,7 +622,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
 <body>
 <!-- 版本横幅（每次改版必更新版本号 + meta[name=app-version]） -->
 <div id="verBanner" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:6px 16px;font-size:.82rem;font-weight:600;position:relative;z-index:9999;cursor:pointer" onclick="this.style.display='none'"   title="点击关闭 · 若版本号低于 v2026-08-03-21:40 说明浏览器缓存了旧版">
-  📦 工作台版本 <b>v2026-08-11 (15:30)</b> · 话筒紧凑+归档项目全显示+AI拆解导入修复(事件委托) · 点击关闭此条
+  📦 工作台版本 <b>v2026-08-11 (15:20)</b> · AI拆解导入修复+加固 · 点击关闭此条
 </div>
 <div class="layout">
   <div class="mask" id="mask" onclick="closeSide()"></div>
@@ -645,7 +645,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
     <a data-view="automation"><span class="ico">⚙️</span>自动化规则</a>
     <a data-view="recycled"><span class="ico">🗑️</span>回收站</a>
     <a data-view="settings"><span class="ico">🔧</span>设置 / 备份</a>
-    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>15:30 · 话筒紧凑+归档项目全显示+AI拆解导入修复</div>
+    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>15:20 · AI拆解导入修复+加固</div>
   </nav>
 
   <main class="main">
@@ -2324,15 +2324,25 @@ function previewTasks(arr){
   return `<table><thead><tr><th>项目关键词</th><th>维度</th><th>事项</th><th>责任人</th><th>截止</th></tr></thead><tbody>${rows}</tbody></table><div class="muted" style="margin-top:8px">导入时会按「项目关键词」匹配在管项目；匹配不到则归入第一个项目。新任务标记「AI待复核」。</div>`;
 }
 function importTasks(arr){
-  let n=0;
+  if(!arr||!arr.length){ toast('⚠️ AI 没有拆出任何任务，请重试'); return; }
+  // 匹配项目：先按项目名关键词，匹配不到则归入第一个非归档项目
+  const allProjs=data.projects.filter(p=>!p.archived);
+  let n=0, unmatched=0;
   arr.forEach(t=>{
-    const p=data.projects.find(x=>x.name.includes(t.projectHint))||activeProjects()[0];
-    if(!p)return;
-    const dimKey=(DIMENSIONS.find(d=>d.label===t.dimension)||{key:t.dimension}).key;
+    let p=null;
+    if(t.projectHint){
+      const hint=String(t.projectHint).trim();
+      p=data.projects.find(x=>x.name===hint)||data.projects.find(x=>x.name.includes(hint)||hint.includes(x.name));
+    }
+    if(!p) p=allProjs[0];
+    if(!p){ unmatched++; return; }
+    const dimKey=(DIMENSIONS.find(d=>d.label===t.dimension)||DIMENSIONS.find(d=>d.key===t.dimension)||{key:'progress'}).key;
     data.tasks.push({id:uid(),projectId:p.id,dimension:dimKey,title:t.title||'(未命名)',status:(DIM[dimKey]&&DIM[dimKey].statusOpts[0])||'未开始',owner:t.owner||'',due:t.due||'',priority:t.priority||'中',reviewed:false,notes:t.notes||'',createdAt:today(),updatedAt:today()});
     n++;
   });
-  save(); render(); toast('已导入 '+n+' 条任务（待复核）✓');
+  save(); render();
+  if(n>0) toast('✅ 已导入 '+n+' 条任务（待复核）'+(unmatched?('，'+unmatched+' 条未匹配项目已归入默认项目'):''));
+  else toast('⚠️ 导入失败：请先到「设置」添加项目');
 }
 /* ---------- [7b] 文档解析库（按需懒加载，保持单文件离线可用） ---------- */
 const _libs={};
