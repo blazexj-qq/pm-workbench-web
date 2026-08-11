@@ -622,7 +622,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
 <body>
 <!-- 版本横幅（每次改版必更新版本号 + meta[name=app-version]） -->
 <div id="verBanner" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:6px 16px;font-size:.82rem;font-weight:600;position:relative;z-index:9999;cursor:pointer" onclick="this.style.display='none'"   title="点击关闭 · 若版本号低于 v2026-08-03-21:40 说明浏览器缓存了旧版">
-  📦 工作台版本 <b>v2026-08-11 (09:48)</b> · 进度监控表头背景色修复 + 待办归档 + 批量优化 · 点击关闭此条
+  📦 工作台版本 <b>v2026-08-11 (09:52)</b> · 删除任务只弹一次确认框 + 表头背景色修复 + 待办归档 · 点击关闭此条
 </div>
 <div class="layout">
   <div class="mask" id="mask" onclick="closeSide()"></div>
@@ -645,7 +645,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
     <a data-view="automation"><span class="ico">⚙️</span>自动化规则</a>
     <a data-view="recycled"><span class="ico">🗑️</span>回收站</a>
     <a data-view="settings"><span class="ico">🔧</span>设置 / 备份</a>
-    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>09:48 · 进度监控表头背景色铺满修复</div>
+    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>09:52 · 删除任务只弹一次确认框</div>
   </nav>
 
   <main class="main">
@@ -4818,7 +4818,7 @@ function renderMilestoneStrip(){
     var dt=e.target.closest('[data-delete-task]');
     if(dt){ e.preventDefault(); e.stopPropagation();
       var did=dt.getAttribute('data-delete-task'), dtitle=dt.getAttribute('data-delete-title')||'该任务';
-      if(confirm('确定删除「'+dtitle+'」？')){ deleteTask(did); render(); } return; }
+      deleteTask(did); render(); return; }
     // 回收站：单条恢复/彻底删除
     var rt=e.target.closest('[data-restore-idx]');
     if(rt){ e.preventDefault(); e.stopPropagation(); restoreFromRecycled(parseInt(rt.getAttribute('data-restore-idx'))); return; }
