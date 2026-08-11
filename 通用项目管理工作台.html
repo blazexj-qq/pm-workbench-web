@@ -618,7 +618,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
 <body>
 <!-- 版本横幅（每次改版必更新版本号 + meta[name=app-version]） -->
 <div id="verBanner" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:6px 16px;font-size:.82rem;font-weight:600;position:relative;z-index:9999;cursor:pointer" onclick="this.style.display='none'"   title="点击关闭 · 若版本号低于 v2026-08-03-21:40 说明浏览器缓存了旧版">
-  📦 工作台版本 <b>v2026-08-11 (09:10)</b> · 监控工具栏合并一行 + 项目列下拉 · 点击关闭此条
+  📦 工作台版本 <b>v2026-08-11 (09:42)</b> · 批量删除只弹一次确认 + 工具栏一行 + 项目下拉 · 点击关闭此条
 </div>
 <div class="layout">
   <div class="mask" id="mask" onclick="closeSide()"></div>
@@ -641,7 +641,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
     <a data-view="automation"><span class="ico">⚙️</span>自动化规则</a>
     <a data-view="recycled"><span class="ico">🗑️</span>回收站</a>
     <a data-view="settings"><span class="ico">🔧</span>设置 / 备份</a>
-    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>09:10 · 监控工具栏合并一行 + 项目列下拉</div>
+    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>09:42 · 批量删除只弹一次确认 + 工具栏一行</div>
   </nav>
 
   <main class="main">
@@ -4116,14 +4116,14 @@ function restoreFromRecycled(idx){
   data.recycled.splice(idx,1); save(); render();
   showToast('已恢复到原处');
 }
-function purgeRecycled(idx){
+function purgeRecycled(idx, skipConfirm){
   const it=(data.recycled||[])[idx]; if(!it)return;
   if(it.type==='project'){
     // 彻底删除归档项目：从 projects 数组中移除
-    if(!confirm('彻底删除项目「'+esc(it.item.name)+'」？该项目将从系统中永久移除，不可恢复。'))return;
+    if(!skipConfirm && !confirm('彻底删除项目「'+esc(it.item.name)+'」？该项目将从系统中永久移除，不可恢复。'))return;
     data.projects=data.projects.filter(p=>p.id!==it.item.id);
   } else {
-    if(!confirm('彻底删除此项？此操作不可恢复。'))return;
+    if(!skipConfirm && !confirm('彻底删除此项？此操作不可恢复。'))return;
   }
   data.recycled.splice(idx,1); save(); render();
 }
@@ -4169,7 +4169,7 @@ function batchPurgeSelected(){
   if(!idxs.length)return;
   if(!confirm('⚠️ 彻底删除选中的 '+idxs.length+' 项？此操作不可恢复！'))return;
   idxs.sort(function(a,b){return b-a;});
-  idxs.forEach(function(idx){purgeRecycled(idx);});
+  idxs.forEach(function(idx){purgeRecycled(idx, true);});
   showToast('已彻底删除 '+idxs.length+' 项');
 }
 function archiveReport(id){
