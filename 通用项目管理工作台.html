@@ -622,7 +622,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
 <body>
 <!-- 版本横幅（每次改版必更新版本号 + meta[name=app-version]） -->
 <div id="verBanner" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:6px 16px;font-size:.82rem;font-weight:600;position:relative;z-index:9999;cursor:pointer" onclick="this.style.display='none'"   title="点击关闭 · 若版本号低于 v2026-08-03-21:40 说明浏览器缓存了旧版">
-  📦 工作台版本 <b>v2026-08-11 (09:52)</b> · 删除任务只弹一次确认框 + 表头背景色修复 + 待办归档 · 点击关闭此条
+  📦 工作台版本 <b>v2026-08-11 (10:17)</b> · 表头背景色彻底修复 + 严重程度列宽对齐 · 点击关闭此条
 </div>
 <div class="layout">
   <div class="mask" id="mask" onclick="closeSide()"></div>
@@ -645,7 +645,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
     <a data-view="automation"><span class="ico">⚙️</span>自动化规则</a>
     <a data-view="recycled"><span class="ico">🗑️</span>回收站</a>
     <a data-view="settings"><span class="ico">🔧</span>设置 / 备份</a>
-    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>09:52 · 删除任务只弹一次确认框</div>
+    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>10:17 · 表头背景色彻底修复(覆盖全局CSS) + 严重程度列宽对齐</div>
   </nav>
 
   <main class="main">
@@ -1368,8 +1368,8 @@ function renderMonitor(key){
   const rows=filteredTs.map(t=>{
     let extra='';
     if(d.type==='numeric'){ if(d.catField) extra=`<td><input class="inline-input" value="${esc(t.cat||'')}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','cat',this.value)" onclick="event.stopPropagation()"></td>`; extra+=`<td><input class="inline-input" value="${esc(t.plan||t.amount||'')}" onchange="event.stopPropagation();inlineUpdateField('${t.id}',${d.catField?'amount':'plan'},this.value)" onclick="event.stopPropagation()" style="width:80px"></td><td><input class="inline-input" value="${esc(t.actual||'')}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','actual',this.value)" onclick="event.stopPropagation()" style="width:80px"></td>`; }
-    else if(d.type==='level'){ extra=`<td><select class="inline-sel tag ${t.level==='红'?'bad':t.level==='黄'?'warn':'ok'}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','level',this.value)"><option value="红" ${t.level==='红'?'selected':''}>红</option><option value="黄" ${t.level==='黄'?'selected':''}>黄</option><option value="绿" ${t.level==='绿'?'selected':''}>绿</option></select></td>`; }
-    else { if(d.severity) extra=`<td><select class="inline-sel tag ${t.severity==='严重'?'bad':'gray'}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','severity',this.value)"><option value="一般" ${t.severity!=='严重'?'selected':''}>一般</option><option value="严重" ${t.severity==='严重'?'selected':''}>严重</option></select></td>`; }
+    else if(d.type==='level'){ extra=`<td><select class="inline-sel tag ${t.level==='红'?'bad':t.level==='黄'?'warn':'ok'}" style="width:55px" onchange="event.stopPropagation();inlineUpdateField('${t.id}','level',this.value)"><option value="红" ${t.level==='红'?'selected':''}>红</option><option value="黄" ${t.level==='黄'?'selected':''}>黄</option><option value="绿" ${t.level==='绿'?'selected':''}>绿</option></select></td>`; }
+    else { if(d.severity) extra=`<td><select class="inline-sel tag ${t.severity==='严重'?'bad':'gray'}" style="width:65px" onchange="event.stopPropagation();inlineUpdateField('${t.id}','severity',this.value)"><option value="一般" ${t.severity!=='严重'?'selected':''}>一般</option><option value="严重" ${t.severity==='严重'?'selected':''}>严重</option></select></td>`; }
     return `<tr class="row-link">
       <td><select class="inline-sel" style="min-width:110px" onchange="event.stopPropagation();inlineUpdateField('${t.id}','projectId',this.value)">${activeProjects().map(p=>`<option value="${p.id}" ${t.projectId===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select></td>
       <td><input class="inline-input inline-title" value="${esc(t.title)}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','title',this.value)" onclick="event.stopPropagation()" placeholder="编辑事项…"></td>
@@ -1383,7 +1383,7 @@ function renderMonitor(key){
       </td>
     </tr>`;
   }).join('');
-  const numHead = d.type==='numeric' ? (d.catField?`<th>类别</th>`:'')+`<th>计划</th><th>实际</th>` : (d.severity?`<th>严重度</th>`:(d.type==='level'?`<th>等级</th>`:''));
+  const numHead = d.type==='numeric' ? (d.catField?`<th>类别</th>`:'')+`<th>计划</th><th>实际</th>` : (d.severity?`<th style="width:70px">严重度</th>`:(d.type==='level'?`<th style="width:60px">等级</th>`:''));
 
   return `
   <div class="mon-toolbar" style="margin-bottom:12px;display:flex;flex-wrap:wrap;align-items:center;gap:8px">
@@ -1408,7 +1408,7 @@ function renderMonitor(key){
   ${_monitorStatusFilter?`<div style="margin-bottom:10px;font-size:.82rem;color:var(--accent);background:#e8f0fe;padding:6px 12px;border-radius:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span>🔍 状态筛选：</span><strong>${esc(_monitorStatusFilter)}</strong>（${filteredTs.length}项）<button class="btn ghost sm" onclick="_monitorStatusFilter='';render()" style="margin-left:auto;padding:2px 8px;font-size:.75rem">✕ 清除</button></div>`:''}
   <div class="panel"><h3>${d.icon} ${d.label} · ${(key==='progress'&&(curMonitorView['progress']||'summary')==='gantt')?'甘特图':'汇总'}</h3>${body}</div>
   <div class="panel"><h3>明细（行内编辑）</h3>
-    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px"><table style="min-width:780px"><thead><tr><th>项目</th><th>事项</th><th>状态</th><th>责任人</th><th>截止</th>${numHead}<th style="width:80px;text-align:center">操作</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px"><table style="min-width:780px;width:auto;table-layout:auto"><thead><tr><th>项目</th><th>事项</th><th>状态</th><th>责任人</th><th>截止</th>${numHead}<th style="width:80px;text-align:center">操作</th></tr></thead><tbody>${rows}</tbody></table></div>
     ${filteredTs.length?'<div class="muted" style="margin-top:8px">共 '+filteredTs.length+' 条'+(_curPF!=='全部'?'（已筛选项目）':'')+'</div>':'<div class="muted">暂无，点上方按钮新建</div>'}
   </div>`;
 }
