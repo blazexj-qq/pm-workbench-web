@@ -618,7 +618,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
 <body>
 <!-- 版本横幅（每次改版必更新版本号 + meta[name=app-version]） -->
 <div id="verBanner" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:6px 16px;font-size:.82rem;font-weight:600;position:relative;z-index:9999;cursor:pointer" onclick="this.style.display='none'"   title="点击关闭 · 若版本号低于 v2026-08-03-21:40 说明浏览器缓存了旧版">
-  📦 工作台版本 <b>v2026-08-11 (08:55)</b> · 回收站批量操作 + AI总结修复 · 点击关闭此条
+  📦 工作台版本 <b>v2026-08-11 (09:05)</b> · 项目列改下拉选择(任务台账+进度监控) · 点击关闭此条
 </div>
 <div class="layout">
   <div class="mask" id="mask" onclick="closeSide()"></div>
@@ -641,7 +641,7 @@ table.mini input,table.mini select{border:1px solid var(--line);border-radius:6p
     <a data-view="automation"><span class="ico">⚙️</span>自动化规则</a>
     <a data-view="recycled"><span class="ico">🗑️</span>回收站</a>
     <a data-view="settings"><span class="ico">🔧</span>设置 / 备份</a>
-    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>08:55 · 回收站批量操作 + AI总结修复(读输入框)</div>
+    <div style="padding:12px 16px 20px;font-size:.72rem;color:#484f58;text-align:center;border-top:1px solid #30363d;margin-top:4px">v2026-08-11<br>09:05 · 项目列改下拉选择(任务台账+进度监控)</div>
   </nav>
 
   <main class="main">
@@ -1367,7 +1367,7 @@ function renderMonitor(key){
     else if(d.type==='level'){ extra=`<td><select class="inline-sel tag ${t.level==='红'?'bad':t.level==='黄'?'warn':'ok'}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','level',this.value)"><option value="红" ${t.level==='红'?'selected':''}>红</option><option value="黄" ${t.level==='黄'?'selected':''}>黄</option><option value="绿" ${t.level==='绿'?'selected':''}>绿</option></select></td>`; }
     else { if(d.severity) extra=`<td><select class="inline-sel tag ${t.severity==='严重'?'bad':'gray'}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','severity',this.value)"><option value="一般" ${t.severity!=='严重'?'selected':''}>一般</option><option value="严重" ${t.severity==='严重'?'selected':''}>严重</option></select></td>`; }
     return `<tr class="row-link">
-      <td>${esc(projName(t.projectId))}</td>
+      <td><select class="inline-sel" style="min-width:110px" onchange="event.stopPropagation();inlineUpdateField('${t.id}','projectId',this.value)">${activeProjects().map(p=>`<option value="${p.id}" ${t.projectId===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select></td>
       <td><input class="inline-input inline-title" value="${esc(t.title)}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','title',this.value)" onclick="event.stopPropagation()" placeholder="编辑事项…"></td>
       <td><select class="inline-sel tag ${statusClass(d,t.status)}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','status',this.value)">${mStatusOpts.map(s=>`<option ${t.status===s?'selected':''}>${s}</option>`).join('')}</select></td>
       <td><input class="inline-input" value="${esc(t.owner||'')}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','owner',this.value)" onclick="event.stopPropagation()" placeholder="责任人" style="width:70px"></td>
@@ -1481,7 +1481,7 @@ function renderTasks(){
     const statusOpts=(d&&d.statusOpts&&d.statusOpts.length)?d.statusOpts:['未开始','进行中','滞后','已完成'];
     // 行内编辑控件：维度/状态/优先级/责任人/截止日 直接改即存；标题点开弹窗做复杂修改
     return `<tr>
-      <td style="white-space:nowrap">${esc(projName(t.projectId))}</td>
+      <td style="white-space:nowrap"><select class="inline-sel" style="min-width:110px" onchange="event.stopPropagation();inlineUpdateField('${t.id}','projectId',this.value)">${activeProjects().map(p=>`<option value="${p.id}" ${t.projectId===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select></td>
       <td><select class="inline-sel" onchange="event.stopPropagation();inlineUpdateField('${t.id}','dimension',this.value)">${DIMENSIONS.map(dd=>`<option value="${dd.key}" ${t.dimension===dd.key?'selected':''}>${dd.icon} ${dd.label}</option>`).join('')}</select></td>
       <td style="max-width:220px"><input class="inline-input" type="text" value="${esc(t.title)}" placeholder="输入事项…" onblur="event.stopPropagation();if(this.value!==(data.tasks.find(x=>x.id==='${t.id}')||{}).title){inlineUpdateField('${t.id}','title',this.value)}" onkeydown="event.stopPropagation()"></td>
       <td><select class="inline-sel tag ${statusClass(d,t.status)}" onchange="event.stopPropagation();inlineUpdateField('${t.id}','status',this.value)">${statusOpts.map(s=>`<option ${t.status===s?'selected':''}>${s}</option>`).join('')}</select></td>
